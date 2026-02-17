@@ -1,0 +1,85 @@
+##################################################
+# Root
+##################################################
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+##################################################
+# Rust Backend
+##################################################
+
+# Cargo build output
+/backend/target/
+
+# Rust generated lockfile (KEEP this for apps!)
+# Comment this out if you ever turn backend into a library
+# (You likely want to keep Cargo.lock committed)
+# /backend/Cargo.lock
+
+# Rust incremental compilation
+**/*.rs.bk
+
+##################################################
+# Frontend (Bun + Vite + React)
+##################################################
+
+# Dependencies
+/frontend/node_modules/
+
+# Production build
+/frontend/dist/
+
+# Vite cache
+/frontend/.vite/
+/frontend/.cache/
+
+# TypeScript build info
+/frontend/*.tsbuildinfo
+
+# Coverage
+/frontend/coverage/
+
+##################################################
+# IDE / Editor
+##################################################
+
+# VSCode
+.vscode/
+
+# JetBrains
+.idea/
+
+# Vim
+*.swp
+*.swo
+
+##################################################
+# Testing
+##################################################
+
+coverage/
+*.lcov
+
+##################################################
+# Temporary files
+##################################################
+
+*.tmp
+*.temp
+*.pid
+*.seed
