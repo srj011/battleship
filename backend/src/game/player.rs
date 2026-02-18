@@ -1,7 +1,8 @@
-use crate::game::board::FireOutcome;
-
 use super::board::{Board, Cell};
 use super::ship::{Direction, Ship};
+use crate::game::board::FireOutcome;
+
+use rand::prelude::*;
 
 pub struct Player {
     board: Board,
@@ -32,6 +33,27 @@ impl Player {
         self.ships.push(Ship::new(positions));
 
         Ok(())
+    }
+
+    pub fn place_random_ships(&mut self, ship_lengths: &[usize]) {
+        let mut rng = rand::rng();
+
+        for &length in ship_lengths {
+            loop {
+                let row = rng.random_range(0..super::board::BOARD_SIZE);
+                let col = rng.random_range(0..super::board::BOARD_SIZE);
+
+                let direction = if rng.random_bool(0.5) {
+                    Direction::Horizontal
+                } else {
+                    Direction::Vertical
+                };
+
+                if self.place_ship(row, col, length, direction).is_ok() {
+                    break;
+                }
+            }
+        }
     }
 
     pub fn fire_at(&mut self, row: usize, col: usize) -> ShotResult {
