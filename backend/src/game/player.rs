@@ -1,4 +1,4 @@
-use super::board::{Board, Cell};
+use super::board::{BOARD_SIZE, Board, Cell};
 use super::ship::{Direction, Ship};
 use crate::game::board::FireOutcome;
 
@@ -40,8 +40,8 @@ impl Player {
 
         for &length in ship_lengths {
             loop {
-                let row = rng.random_range(0..super::board::BOARD_SIZE);
-                let col = rng.random_range(0..super::board::BOARD_SIZE);
+                let row = rng.random_range(0..BOARD_SIZE);
+                let col = rng.random_range(0..BOARD_SIZE);
 
                 let direction = if rng.random_bool(0.5) {
                     Direction::Horizontal
@@ -70,6 +70,20 @@ impl Player {
                 } else {
                     ShotResult::Hit
                 }
+            }
+        }
+    }
+
+    pub fn random_shot(&self) -> (usize, usize) {
+        let mut rng = rand::rng();
+
+        loop {
+            let row = rng.random_range(0..BOARD_SIZE);
+            let col = rng.random_range(0..BOARD_SIZE);
+
+            match self.board.get_cell(row, col) {
+                Cell::Hit | Cell::Miss => continue,
+                _ => return (row, col),
             }
         }
     }

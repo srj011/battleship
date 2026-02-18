@@ -21,6 +21,10 @@ impl Board {
         }
     }
 
+    pub fn get_cell(&self, row: usize, col: usize) -> Cell {
+        self.grid[row][col]
+    }
+
     pub fn place_ship(
         &mut self,
         start_row: usize,
