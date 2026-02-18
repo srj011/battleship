@@ -57,4 +57,26 @@ impl Board {
 
         Ok(positions)
     }
+
+    pub fn fire_at(&mut self, row: usize, col: usize) -> FireOutcome {
+        match self.grid[row][col] {
+            Cell::Empty => {
+                self.grid[row][col] = Cell::Miss;
+                FireOutcome::Miss
+            }
+
+            Cell::Ship(index) => {
+                self.grid[row][col] = Cell::Hit;
+                FireOutcome::Hit(index)
+            }
+
+            Cell::Hit | Cell::Miss => FireOutcome::AlreadyShot,
+        }
+    }
+}
+
+pub enum FireOutcome {
+    Hit(usize),
+    Miss,
+    AlreadyShot,
 }
