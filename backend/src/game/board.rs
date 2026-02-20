@@ -1,4 +1,5 @@
-use crate::game::ship::Direction;
+use super::coord::Coord;
+use super::ship::Direction;
 
 pub const BOARD_SIZE: usize = 10;
 
@@ -21,61 +22,65 @@ impl Board {
         }
     }
 
-    pub fn get_cell(&self, row: usize, col: usize) -> Cell {
-        self.grid[row][col]
+    pub fn get_cell(&self, coord: Coord) -> Cell {
+        self.grid[coord.row][coord.col]
     }
 
     pub fn place_ship(
         &mut self,
-        start_row: usize,
-        start_col: usize,
+        start: Coord,
         length: usize,
         direction: Direction,
         ship_index: usize,
-    ) -> Result<Vec<(usize, usize)>, String> {
-        let mut positions: Vec<(usize, usize)> = Vec::new();
+    ) -> Result<Vec<Coord>, String> {
+        let mut positions: Vec<Coord> = Vec::new();
 
         for i in 0..length {
             // Calculate coordinate for each iteration
-            let (row, col) = match direction {
-                Direction::Horizontal => (start_row, start_col + i),
-                Direction::Vertical => (start_row + i, start_col),
-            };
+            let coord = match direction {
+                Direction::Horizontal => start.offset(0, i as isize),
+                Direction::Vertical => start.offset(i as isize, 0),
+            }
+            .ok_or_else(|| "Ship out of bounds!".to_string())?;
 
             // Bounds check
-            if row >= BOARD_SIZE && col >= BOARD_SIZE {
+            if !self.within_bounds(coord) {
                 return Err("Ship out of bounds!".into());
             }
 
             // Overlap check
-            if self.grid[row][col] != Cell::Empty {
+            if self.grid[coord.row][coord.col] != Cell::Empty {
                 return Err("Ship overlaps another ship!".into());
             }
 
-            positions.push((row, col));
+            positions.push(coord);
         }
 
-        for (row, col) in &positions {
-            self.grid[*row][*col] = Cell::Ship(ship_index);
+        for coord in &positions {
+            self.grid[coord.row][coord.col] = Cell::Ship(ship_index);
         }
 
         Ok(positions)
     }
 
-    pub fn fire_at(&mut self, row: usize, col: usize) -> FireOutcome {
-        match self.grid[row][col] {
+    pub fn fire_at(&mut self, coord: Coord) -> FireOutcome {
+        match self.grid[coord.row][coord.col] {
             Cell::Empty => {
-                self.grid[row][col] = Cell::Miss;
+                self.grid[coord.row][coord.col] = Cell::Miss;
                 FireOutcome::Miss
             }
 
             Cell::Ship(index) => {
-                self.grid[row][col] = Cell::Hit;
+                self.grid[coord.row][coord.col] = Cell::Hit;
                 FireOutcome::Hit(index)
             }
 
             Cell::Hit | Cell::Miss => FireOutcome::AlreadyShot,
         }
+    }
+
+    pub fn within_bounds(&self, coord: Coord) -> bool {
+        coord.row < BOARD_SIZE && coord.col < BOARD_SIZE
     }
 }
 

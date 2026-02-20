@@ -1,10 +1,12 @@
+use crate::game::coord::Coord;
+
 pub struct Ship {
-    positions: Vec<(usize, usize)>,
+    positions: Vec<Coord>,
     hits: usize,
 }
 
 impl Ship {
-    pub fn new(positions: Vec<(usize, usize)>) -> Self {
+    pub fn new(positions: Vec<Coord>) -> Self {
         Self { positions, hits: 0 }
     }
 

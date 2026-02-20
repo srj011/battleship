@@ -1,6 +1,6 @@
-use super::board::{BOARD_SIZE, Board, Cell};
+use super::board::{BOARD_SIZE, Board, Cell, FireOutcome};
+use super::coord::Coord;
 use super::ship::{Direction, Ship};
-use crate::game::board::FireOutcome;
 
 use rand::prelude::*;
 
@@ -19,8 +19,7 @@ impl Player {
 
     pub fn place_ship(
         &mut self,
-        start_row: usize,
-        start_col: usize,
+        start: Coord,
         length: usize,
         direction: Direction,
     ) -> Result<(), String> {
@@ -28,7 +27,7 @@ impl Player {
 
         let positions = self
             .board
-            .place_ship(start_row, start_col, length, direction, ship_index)?;
+            .place_ship(start, length, direction, ship_index)?;
 
         self.ships.push(Ship::new(positions));
 
@@ -42,6 +41,7 @@ impl Player {
             loop {
                 let row = rng.random_range(0..BOARD_SIZE);
                 let col = rng.random_range(0..BOARD_SIZE);
+                let coord = Coord { row, col };
 
                 let direction = if rng.random_bool(0.5) {
                     Direction::Horizontal
@@ -49,15 +49,15 @@ impl Player {
                     Direction::Vertical
                 };
 
-                if self.place_ship(row, col, length, direction).is_ok() {
+                if self.place_ship(coord, length, direction).is_ok() {
                     break;
                 }
             }
         }
     }
 
-    pub fn fire_at(&mut self, row: usize, col: usize) -> ShotResult {
-        match self.board.fire_at(row, col) {
+    pub fn fire_at(&mut self, coord: Coord) -> ShotResult {
+        match self.board.fire_at(coord) {
             FireOutcome::Miss => ShotResult::Miss,
             FireOutcome::AlreadyShot => ShotResult::AlreadyShot,
 
@@ -74,16 +74,17 @@ impl Player {
         }
     }
 
-    pub fn random_shot(&self) -> (usize, usize) {
+    pub fn random_shot(&self) -> Coord {
         let mut rng = rand::rng();
 
         loop {
             let row = rng.random_range(0..BOARD_SIZE);
             let col = rng.random_range(0..BOARD_SIZE);
+            let coord = Coord { row, col };
 
-            match self.board.get_cell(row, col) {
+            match self.board.get_cell(coord) {
                 Cell::Hit | Cell::Miss => continue,
-                _ => return (row, col),
+                _ => return coord,
             }
         }
     }
