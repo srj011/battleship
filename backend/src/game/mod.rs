@@ -1,3 +1,4 @@
+pub mod ai;
 pub mod board;
 pub mod coord;
 pub mod game_state;
