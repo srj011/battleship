@@ -62,3 +62,46 @@ impl GameState {
         };
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::coord::Coord;
+    use crate::game::ship::Direction;
+
+    fn setup_players() -> (Player, Player) {
+        let mut p1 = Player::new();
+        let mut p2 = Player::new();
+
+        p1.place_ship(Coord { row: 0, col: 0 }, 2, Direction::Horizontal)
+            .unwrap();
+
+        p2.place_ship(Coord { row: 0, col: 0 }, 2, Direction::Horizontal)
+            .unwrap();
+
+        (p1, p2)
+    }
+
+    #[test]
+    fn turn_switches_on_miss() {
+        let (p1, p2) = setup_players();
+        let mut game = GameState::new(p1, p2);
+
+        // Player1 fires miss
+        let _ = game.take_turn(Coord { row: 5, col: 5 });
+
+        // Next turn should belong to Player2
+        assert!(matches!(game.turn, Turn::Player2));
+    }
+
+    #[test]
+    fn game_ends_when_ship_destroyed() {
+        let (p1, p2) = setup_players();
+        let mut game = GameState::new(p1, p2);
+
+        game.take_turn(Coord { row: 0, col: 0 });
+        game.take_turn(Coord { row: 0, col: 1 });
+
+        assert!(matches!(game.status, GameStatus::Finished));
+    }
+}

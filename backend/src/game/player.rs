@@ -100,3 +100,43 @@ pub enum ShotResult {
     Sunk,
     AlreadyShot,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::coord::Coord;
+    use crate::game::ship::Direction;
+
+    #[test]
+    fn player_loses_when_all_ships_sunk() {
+        let mut player = Player::new();
+
+        player
+            .place_ship(Coord { row: 0, col: 0 }, 2, Direction::Horizontal)
+            .unwrap();
+
+        player.fire_at(Coord { row: 0, col: 0 });
+        player.fire_at(Coord { row: 0, col: 1 });
+
+        assert!(player.has_lost());
+    }
+
+    #[test]
+    fn fire_at_returns_sunk_when_ship_destroyed() {
+        let mut player = Player::new();
+
+        player
+            .place_ship(Coord { row: 0, col: 0 }, 2, Direction::Horizontal)
+            .unwrap();
+
+        assert!(matches!(
+            player.fire_at(Coord { row: 0, col: 0 }),
+            ShotResult::Hit
+        ));
+
+        assert!(matches!(
+            player.fire_at(Coord { row: 0, col: 1 }),
+            ShotResult::Sunk
+        ));
+    }
+}

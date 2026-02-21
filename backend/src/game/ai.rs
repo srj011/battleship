@@ -175,3 +175,20 @@ impl AIPlayer {
         self.back = None;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ai_never_repeats_shots() {
+        let mut ai = AIPlayer::new();
+        let mut shots = HashSet::new();
+
+        for _ in 0..50 {
+            let shot = ai.next_shot();
+            assert!(!shots.contains(&shot));
+            shots.insert(shot);
+        }
+    }
+}

@@ -89,3 +89,80 @@ pub enum FireOutcome {
     Miss,
     AlreadyShot,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::coord::Coord;
+    use crate::game::ship::Direction;
+
+    #[test]
+    fn place_ship_within_bounds() {
+        let mut board = Board::new();
+
+        let result = board.place_ship(Coord { row: 0, col: 0 }, 3, Direction::Horizontal, 0);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn place_ship_out_of_bounds() {
+        let mut board = Board::new();
+
+        let result = board.place_ship(
+            Coord {
+                row: 0,
+                col: BOARD_SIZE - 1,
+            },
+            3,
+            Direction::Horizontal,
+            0,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn overlapping_ships_fail() {
+        let mut board = Board::new();
+
+        board
+            .place_ship(Coord { row: 0, col: 0 }, 3, Direction::Horizontal, 0)
+            .unwrap();
+
+        let result = board.place_ship(Coord { row: 0, col: 1 }, 3, Direction::Vertical, 1);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn fire_at_marks_hit_and_miss() {
+        let mut board = Board::new();
+
+        board
+            .place_ship(Coord { row: 0, col: 0 }, 2, Direction::Horizontal, 0)
+            .unwrap();
+
+        assert!(matches!(
+            board.fire_at(Coord { row: 0, col: 0 }),
+            FireOutcome::Hit(_)
+        ));
+
+        assert!(matches!(
+            board.fire_at(Coord { row: 5, col: 5 }),
+            FireOutcome::Miss
+        ));
+    }
+
+    #[test]
+    fn firing_twice_returns_already_shot() {
+        let mut board = Board::new();
+
+        board.fire_at(Coord { row: 5, col: 5 });
+
+        assert!(matches!(
+            board.fire_at(Coord { row: 5, col: 5 }),
+            FireOutcome::AlreadyShot
+        ));
+    }
+}
