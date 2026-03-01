@@ -94,6 +94,7 @@ impl Player {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ShotResult {
     Hit,
     Miss,

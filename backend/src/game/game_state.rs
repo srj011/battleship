@@ -1,13 +1,13 @@
 use super::coord::Coord;
 use super::player::{Player, ShotResult};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Turn {
     Player1,
     Player2,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum GameStatus {
     Ongoing,
     Finished,
@@ -15,6 +15,7 @@ pub enum GameStatus {
 
 pub enum GameError {
     GameAlreadyFinished,
+    NotPlayersTurn,
 }
 
 pub struct GameState {
