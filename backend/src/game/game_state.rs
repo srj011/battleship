@@ -1,14 +1,20 @@
 use super::coord::Coord;
 use super::player::{Player, ShotResult};
 
+#[derive(Clone, Copy)]
 pub enum Turn {
     Player1,
     Player2,
 }
 
+#[derive(Clone, Copy)]
 pub enum GameStatus {
     Ongoing,
     Finished,
+}
+
+pub enum GameError {
+    GameAlreadyFinished,
 }
 
 pub struct GameState {
@@ -28,9 +34,17 @@ impl GameState {
         }
     }
 
-    pub fn take_turn(&mut self, coord: Coord) -> ShotResult {
+    pub fn status(&self) -> GameStatus {
+        self.status
+    }
+
+    pub fn current_turn(&self) -> Turn {
+        self.turn
+    }
+
+    pub fn take_turn(&mut self, coord: Coord) -> Result<ShotResult, GameError> {
         if let GameStatus::Finished = self.status {
-            panic!("Game is already finished");
+            return Err(GameError::GameAlreadyFinished);
         }
 
         let result = match self.turn {
@@ -45,14 +59,14 @@ impl GameState {
 
         if opponent_lost {
             self.status = GameStatus::Finished;
-            return result;
+            return Ok(result);
         }
 
         if matches!(result, ShotResult::Miss) {
             self.switch_turn();
         }
 
-        result
+        Ok(result)
     }
 
     fn switch_turn(&mut self) {
