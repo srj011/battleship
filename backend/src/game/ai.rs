@@ -1,4 +1,4 @@
-use rand::prelude::*;
+use rand::{prelude::*, rng};
 use std::collections::HashSet;
 
 use super::board::BOARD_SIZE;
@@ -6,7 +6,6 @@ use super::coord::Coord;
 use super::player::ShotResult;
 
 pub struct AIPlayer {
-    rng: ThreadRng,
     shots_taken: HashSet<Coord>,
     adjacent_targets: Vec<Coord>,
     front: Option<Coord>,
@@ -16,7 +15,6 @@ pub struct AIPlayer {
 impl AIPlayer {
     pub fn new() -> Self {
         Self {
-            rng: rand::rng(),
             shots_taken: HashSet::new(),
             adjacent_targets: Vec::new(),
             front: None,
@@ -41,9 +39,10 @@ impl AIPlayer {
         }
 
         // Hunt mode (parity based random)
+        let mut rng = rng();
         loop {
-            let row = self.rng.random_range(0..BOARD_SIZE);
-            let col = self.rng.random_range(0..BOARD_SIZE);
+            let row = rng.random_range(0..BOARD_SIZE);
+            let col = rng.random_range(0..BOARD_SIZE);
 
             // Parity check
             if (row + col) % 2 != 0 {
