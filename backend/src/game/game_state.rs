@@ -1,13 +1,16 @@
+use serde::{Deserialize, Serialize};
+
 use super::coord::Coord;
 use super::player::{Player, ShotResult};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Turn {
     Player1,
     Player2,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum GameStatus {
     Ongoing,
     Finished,

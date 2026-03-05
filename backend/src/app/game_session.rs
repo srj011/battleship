@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use crate::game::ai::AIPlayer;
 use crate::game::coord::Coord;
 use crate::game::game_state::{GameError, GameState, GameStatus, Turn};
@@ -5,6 +7,7 @@ use crate::game::player::{Player, ShotResult};
 
 const SHIP_LENGHTS: &[usize] = &[5, 4, 3, 3, 2];
 
+#[derive(Serialize)]
 pub struct TurnOutcome {
     player_result: ShotResult,
     ai_move: Option<(Coord, ShotResult)>,

@@ -1,4 +1,6 @@
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+use serde::Serialize;
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 pub struct Coord {
     pub row: usize,
     pub col: usize,

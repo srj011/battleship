@@ -1,8 +1,9 @@
+use rand::prelude::*;
+use serde::Serialize;
+
 use super::board::{BOARD_SIZE, Board, Cell, FireOutcome};
 use super::coord::Coord;
 use super::ship::{Direction, Ship};
-
-use rand::prelude::*;
 
 pub struct Player {
     board: Board,
@@ -94,7 +95,7 @@ impl Player {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum ShotResult {
     Hit,
     Miss,
