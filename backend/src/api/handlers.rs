@@ -1,9 +1,16 @@
-use axum::{Json, extract::State};
+use axum::{
+    Json,
+    extract::{Path, State},
+};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
+use super::errors::ApiError;
+use crate::app::game_session::TurnOutcome;
 use crate::app::session_manager::SessionManager;
+use crate::game::coord::Coord;
+use crate::game::game_state::{GameError, Turn};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -20,6 +27,12 @@ pub struct CreateGameRequest {
 #[derive(Serialize)]
 pub struct CreateGameResponse {
     game_id: Uuid,
+}
+
+#[derive(Deserialize)]
+pub struct FireRequest {
+    player: Turn,
+    coord: Coord,
 }
 
 pub async fn root() -> &'static str {
