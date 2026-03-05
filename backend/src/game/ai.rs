@@ -5,20 +5,18 @@ use super::board::BOARD_SIZE;
 use super::coord::Coord;
 use super::player::ShotResult;
 
-pub struct AIPlayer {
+pub struct AiPlayer {
     shots_taken: HashSet<Coord>,
     adjacent_targets: Vec<Coord>,
-    front: Option<Coord>,
-    back: Option<Coord>,
+    current_hits: Vec<Coord>,
 }
 
-impl AIPlayer {
+impl AiPlayer {
     pub fn new() -> Self {
         Self {
             shots_taken: HashSet::new(),
             adjacent_targets: Vec::new(),
-            front: None,
-            back: None,
+            current_hits: Vec::new(),
         }
     }
 
@@ -49,7 +47,7 @@ impl AIPlayer {
                 continue;
             }
 
-            let coord = Coord { row, col };
+            let coord = Coord::new(row, col);
 
             if !self.shots_taken.contains(&coord) {
                 self.shots_taken.insert(coord);
@@ -67,24 +65,14 @@ impl AIPlayer {
     }
 
     fn handle_hit(&mut self, coord: Coord) {
-        match (self.front, self.back) {
+        self.current_hits.push(coord);
+
+        if self.current_hits.len() == 1 {
             // First hit
-            (None, None) => {
-                self.front = Some(coord);
-                self.back = Some(coord);
-                self.add_adjacent_targets(coord);
-            }
-
-            // Second hit
-            (Some(front), Some(back)) if front == back => {
-                self.back = Some(coord);
-                self.adjacent_targets.clear();
-            }
-
-            // 2+ hits
-            _ => {
-                self.update_endpoints(coord);
-            }
+            self.add_adjacent_targets(coord);
+        } else {
+            // Subsequent hits => Orientation discovered
+            self.adjacent_targets.clear();
         }
     }
 
@@ -105,61 +93,48 @@ impl AIPlayer {
         }
     }
 
-    fn update_endpoints(&mut self, coord: Coord) {
-        let front = self.front.unwrap();
-        let back = self.back.unwrap();
-
-        if front.row == back.row {
-            // Horizontal
-            if coord.col < front.col {
-                self.front = Some(coord);
-            } else if coord.col > back.col {
-                self.back = Some(coord);
-            }
-        } else {
-            // Vertical
-            if coord.row < front.row {
-                self.front = Some(coord);
-            } else if coord.row > back.row {
-                self.back = Some(coord);
-            }
-        }
-    }
-
     fn target_mode_shot(&self) -> Option<Coord> {
-        let (front, back) = match (self.front, self.back) {
-            (Some(f), Some(b)) if f != b => (f, b),
-            _ => return None,
-        };
+        if self.current_hits.len() < 2 {
+            return None;
+        }
 
-        if front.row == back.row {
+        let first = self.current_hits[0];
+        let second = self.current_hits[1];
+
+        if first.row == second.row {
             // Horizontal
-            if let Some(target) = back.offset(0, 1) {
-                // Extend right
-                if self.is_valid_target(target) {
-                    return Some(target);
+            let min_col = self.current_hits.iter().map(|c| c.col).min().unwrap();
+            let max_col = self.current_hits.iter().map(|c| c.col).max().unwrap();
+
+            if let Some(left) = Coord::new(first.row, min_col).offset(0, -1) {
+                if self.is_valid_target(left) {
+                    return Some(left);
                 }
             }
-            if let Some(target) = front.offset(0, -1) {
-                // Extend left
-                if self.is_valid_target(target) {
-                    return Some(target);
+
+            if let Some(right) = Coord::new(first.row, max_col).offset(0, 1) {
+                if self.is_valid_target(right) {
+                    return Some(right);
                 }
             }
         } else {
             // Vertical
-            if let Some(target) = back.offset(1, 0) {
-                // Extend down
-                if self.is_valid_target(target) {
-                    return Some(target);
+            let min_row = self.current_hits.iter().map(|c| c.row).min().unwrap();
+            let max_row = self.current_hits.iter().map(|c| c.row).max().unwrap();
+
+            if let Some(up) = Coord::new(min_row, first.col).offset(-1, 0) {
+                if self.is_valid_target(up) {
+                    return Some(up);
                 }
             }
-            if let Some(target) = front.offset(-1, 0) {
-                if self.is_valid_target(target) {
-                    return Some(target);
+
+            if let Some(down) = Coord::new(max_row, first.col).offset(1, 0) {
+                if self.is_valid_target(down) {
+                    return Some(down);
                 }
             }
         }
+
         None
     }
 
@@ -170,8 +145,7 @@ impl AIPlayer {
 
     fn reset_targets(&mut self) {
         self.adjacent_targets.clear();
-        self.front = None;
-        self.back = None;
+        self.current_hits.clear();
     }
 }
 
@@ -181,7 +155,7 @@ mod tests {
 
     #[test]
     fn ai_never_repeats_shots() {
-        let mut ai = AIPlayer::new();
+        let mut ai = AiPlayer::new();
         let mut shots = HashSet::new();
 
         for _ in 0..50 {

@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::game::ai::AIPlayer;
+use crate::game::ai::AiPlayer;
 use crate::game::coord::Coord;
 use crate::game::game_state::{GameError, GameState, GameStatus, Turn};
 use crate::game::player::{Player, ShotResult};
@@ -22,7 +22,7 @@ pub struct TurnOutcome {
 
 pub struct GameSession {
     game: GameState,
-    ai: Option<AIPlayer>,
+    ai: Option<AiPlayer>,
 }
 
 impl GameSession {
@@ -34,7 +34,7 @@ impl GameSession {
         player2.place_random_ships(SHIP_LENGHTS);
 
         let game = GameState::new(player1, player2);
-        let ai = Some(AIPlayer::new());
+        let ai = Some(AiPlayer::new());
         Self { game, ai }
     }
 
