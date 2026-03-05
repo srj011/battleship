@@ -7,10 +7,16 @@ use crate::game::player::{Player, ShotResult};
 
 const SHIP_LENGHTS: &[usize] = &[5, 4, 3, 3, 2];
 
+#[derive(Clone, Copy, Serialize)]
+pub struct AiMove {
+    coord: Coord,
+    result: ShotResult,
+}
+
 #[derive(Serialize)]
 pub struct TurnOutcome {
     player_result: ShotResult,
-    ai_move: Option<(Coord, ShotResult)>,
+    ai_moves: Vec<AiMove>,
     status: GameStatus,
 }
 
@@ -59,23 +65,35 @@ impl GameSession {
         }
 
         let player_result = self.game.take_turn(coord)?;
-        let mut ai_move = None;
+        let mut ai_moves = Vec::new();
 
         if let Some(ai) = &mut self.ai {
-            if self.game.status() == GameStatus::Ongoing
+            while self.game.status() == GameStatus::Ongoing
                 && self.game.current_turn() == Turn::Player2
             {
                 let ai_coord = ai.next_shot();
                 let ai_result = self.game.take_turn(ai_coord)?;
+
+                if ai_result == ShotResult::AlreadyShot {
+                    panic!("AI fired at an already-shot cell {ai_coord:?}");
+                }
+
                 ai.process_result(ai_coord, ai_result);
 
-                ai_move = Some((ai_coord, ai_result))
+                ai_moves.push(AiMove {
+                    coord: ai_coord,
+                    result: ai_result,
+                });
+
+                if ai_result == ShotResult::Miss {
+                    break;
+                }
             }
         }
 
         Ok(TurnOutcome {
             player_result,
-            ai_move,
+            ai_moves,
             status: self.game.status(),
         })
     }
