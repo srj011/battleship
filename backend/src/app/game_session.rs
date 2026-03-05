@@ -3,6 +3,8 @@ use crate::game::coord::Coord;
 use crate::game::game_state::{GameError, GameState, GameStatus, Turn};
 use crate::game::player::{Player, ShotResult};
 
+const SHIP_LENGHTS: &[usize] = &[5, 4, 3, 3, 2];
+
 pub struct TurnOutcome {
     player_result: ShotResult,
     ai_move: Option<(Coord, ShotResult)>,
@@ -16,8 +18,11 @@ pub struct GameSession {
 
 impl GameSession {
     pub fn new_vs_ai() -> Self {
-        let player1 = Player::new();
-        let player2 = Player::new();
+        let mut player1 = Player::new();
+        let mut player2 = Player::new();
+
+        player1.place_random_ships(SHIP_LENGHTS);
+        player2.place_random_ships(SHIP_LENGHTS);
 
         let game = GameState::new(player1, player2);
         let ai = Some(AIPlayer::new());
