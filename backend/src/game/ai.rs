@@ -1,7 +1,7 @@
 use rand::{prelude::*, rng};
 use std::collections::HashSet;
 
-use super::board::BOARD_SIZE;
+use super::board::{BOARD_SIZE, within_bounds};
 use super::coord::Coord;
 use super::player::ShotResult;
 
@@ -139,8 +139,8 @@ impl AiPlayer {
     }
 
     // Utility methods
-    fn is_valid_target(&self, target: Coord) -> bool {
-        target.row < BOARD_SIZE && target.col < BOARD_SIZE && !self.shots_taken.contains(&target)
+    fn is_valid_target(&self, coord: Coord) -> bool {
+        within_bounds(coord) && !self.shots_taken.contains(&coord)
     }
 
     fn reset_targets(&mut self) {

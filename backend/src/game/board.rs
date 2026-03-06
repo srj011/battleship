@@ -44,7 +44,7 @@ impl Board {
             .ok_or_else(|| "Ship out of bounds!".to_string())?;
 
             // Bounds check
-            if !self.within_bounds(coord) {
+            if !within_bounds(coord) {
                 return Err("Ship out of bounds!".into());
             }
 
@@ -78,10 +78,10 @@ impl Board {
             Cell::Hit | Cell::Miss => FireOutcome::AlreadyShot,
         }
     }
+}
 
-    pub fn within_bounds(&self, coord: Coord) -> bool {
-        coord.row < BOARD_SIZE && coord.col < BOARD_SIZE
-    }
+pub fn within_bounds(coord: Coord) -> bool {
+    coord.row < BOARD_SIZE && coord.col < BOARD_SIZE
 }
 
 pub enum FireOutcome {
