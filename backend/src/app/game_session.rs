@@ -33,6 +33,7 @@ pub struct TurnOutcome {
 pub struct GameSession {
     game: GameState,
     ai: Option<AiPlayer>,
+    history: Vec<TurnEvent>,
 }
 
 impl GameSession {
@@ -45,7 +46,11 @@ impl GameSession {
 
         let game = GameState::new(player1, player2);
         let ai = Some(AiPlayer::new());
-        Self { game, ai }
+        Self {
+            game,
+            ai,
+            history: Vec::new(),
+        }
     }
 
     pub fn new_vs_multiplayer() -> Self {
@@ -54,7 +59,11 @@ impl GameSession {
 
         let game = GameState::new(player1, player2);
 
-        Self { game, ai: None }
+        Self {
+            game,
+            ai: None,
+            history: Vec::new(),
+        }
     }
 
     pub fn status(&self) -> GameStatus {
@@ -63,6 +72,10 @@ impl GameSession {
 
     pub fn current_turn(&self) -> Turn {
         self.game.current_turn()
+    }
+
+    pub fn events(&self) -> &[TurnEvent] {
+        &self.history
     }
 
     pub fn player_fire(
@@ -115,6 +128,8 @@ impl GameSession {
     ) -> Result<TurnEvent, GameError> {
         let event = TurnEvent::new(player, coord, self.game.take_turn(coord)?);
         events.push(event);
+        self.history.push(event);
+
         Ok(event)
     }
 }
