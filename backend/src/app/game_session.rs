@@ -30,6 +30,13 @@ pub struct TurnOutcome {
     status: GameStatus,
 }
 
+#[derive(Serialize)]
+pub struct GameSnapshot {
+    turn: Turn,
+    history: Vec<TurnEvent>,
+    status: GameStatus,
+}
+
 pub struct GameSession {
     game: GameState,
     ai: Option<AiPlayer>,
@@ -76,6 +83,14 @@ impl GameSession {
 
     pub fn events(&self) -> &[TurnEvent] {
         &self.history
+    }
+
+    pub fn snapshot(&self) -> GameSnapshot {
+        GameSnapshot {
+            turn: self.current_turn(),
+            history: self.history.clone(),
+            status: self.status(),
+        }
     }
 
     pub fn player_fire(

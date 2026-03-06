@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use super::errors::ApiError;
-use crate::app::game_session::TurnOutcome;
+use crate::app::game_session::{GameSnapshot, TurnOutcome};
 use crate::app::session_manager::SessionManager;
 use crate::game::coord::Coord;
 use crate::game::game_state::{GameError, Turn};
@@ -51,6 +51,17 @@ pub async fn create_game(
     };
 
     Json(CreateGameResponse { game_id })
+}
+
+pub async fn get_game(
+    Path(id): Path<Uuid>,
+    State(manager): State<Arc<Mutex<SessionManager>>>,
+) -> Result<Json<GameSnapshot>, ApiError> {
+    let manager = manager.lock().unwrap();
+
+    let session = manager.get_session(&id).ok_or(ApiError::SessionNotFound)?;
+
+    Ok(Json(session.snapshot()))
 }
 
 pub async fn fire(
