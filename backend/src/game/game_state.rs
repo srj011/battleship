@@ -16,6 +16,7 @@ pub enum GameStatus {
     Finished,
 }
 
+#[derive(Debug)]
 pub enum GameError {
     GameAlreadyFinished,
     NotPlayersTurn,
@@ -117,8 +118,8 @@ mod tests {
         let (p1, p2) = setup_players();
         let mut game = GameState::new(p1, p2);
 
-        game.take_turn(Coord { row: 0, col: 0 });
-        game.take_turn(Coord { row: 0, col: 1 });
+        let _ = game.take_turn(Coord { row: 0, col: 0 });
+        let _ = game.take_turn(Coord { row: 0, col: 1 });
 
         assert!(matches!(game.status, GameStatus::Finished));
     }

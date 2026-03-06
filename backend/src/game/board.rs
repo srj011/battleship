@@ -166,3 +166,12 @@ mod tests {
         ));
     }
 }
+
+#[test]
+fn within_bounds_detects_invalid_coordinates() {
+    assert!(within_bounds(Coord { row: 0, col: 0 }));
+    assert!(within_bounds(Coord { row: 9, col: 9 }));
+
+    assert!(!within_bounds(Coord { row: 10, col: 0 }));
+    assert!(!within_bounds(Coord { row: 0, col: 10 }));
+}

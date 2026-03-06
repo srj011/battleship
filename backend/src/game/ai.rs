@@ -164,4 +164,25 @@ mod tests {
             shots.insert(shot);
         }
     }
+
+    #[test]
+    fn ai_never_shoots_out_of_bounds() {
+        let mut ai = AiPlayer::new();
+
+        for _ in 0..40 {
+            let shot = ai.next_shot();
+
+            assert!(within_bounds(shot));
+        }
+    }
+
+    #[test]
+    fn ai_hunt_mode_uses_parity_cells() {
+        let mut ai = AiPlayer::new();
+
+        for _ in 0..40 {
+            let shot = ai.next_shot();
+            assert_eq!((shot.row + shot.col) % 2, 0);
+        }
+    }
 }

@@ -1,12 +1,7 @@
-use axum::{Router, routing::get};
 use std::sync::{Arc, Mutex};
 
-use crate::api::routes::create_router;
-use crate::app::session_manager::SessionManager;
-
-mod api;
-mod app;
-mod game;
+use backend::api::routes::create_router;
+use backend::app::session_manager::SessionManager;
 
 #[tokio::main]
 async fn main() {

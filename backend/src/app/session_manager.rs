@@ -38,3 +38,17 @@ impl SessionManager {
         id
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_vs_ai_creates_session() {
+        let mut manager = SessionManager::new();
+
+        let id = manager.create_vs_ai();
+
+        assert!(manager.get_session(&id).is_some());
+    }
+}

@@ -11,7 +11,7 @@ use crate::app::game_session::{GameSnapshot, TurnOutcome};
 use crate::app::session_manager::SessionManager;
 use crate::game::board::within_bounds;
 use crate::game::coord::Coord;
-use crate::game::game_state::{GameError, Turn};
+use crate::game::game_state::Turn;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]
