@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
-use backend::api::routes::create_router;
-use backend::app::session_manager::SessionManager;
+use battleship::api::routes::create_router;
+use battleship::app::session_manager::SessionManager;
 
 #[tokio::main]
 async fn main() {

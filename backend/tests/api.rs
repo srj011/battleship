@@ -7,8 +7,8 @@ use tower::ServiceExt;
 
 use std::sync::{Arc, Mutex};
 
-use backend::api::routes::create_router;
-use backend::app::session_manager::SessionManager;
+use battleship::api::routes::create_router;
+use battleship::app::session_manager::SessionManager;
 
 #[tokio::test]
 async fn create_game_returns_game_id() {
