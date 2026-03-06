@@ -6,12 +6,12 @@
 ![Multiplayer](https://img.shields.io/badge/multiplayer-upcoming-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A modular, extensible **Battleship game engine** built in Rust with a strong focus on clean architecture, testability, and future real-time multiplayer integration.
+A modular, extensible **Battleship game engine and backend API** written in Rust with a strong focus on clean architecture, testability, and future real-time multiplayer integration.
 
-The long-term goal is to evolve this into a full-stack, real-time multiplayer web application powered by **Axum (WebSockets)** and **React + TypeScript**.
+The project exposes the game engine through a REST API built with **Axum**, and is designed to evolve into a full-stack multiplayer web application powered by **React + TypeScript**.
 
 
-## 🧠 Architecture Overview
+## Architecture Overview
 
 The engine is designed with strict separation between:
 
@@ -28,21 +28,29 @@ This allows the engine to remain:
 - Easily integrable with WebSocket-based multiplayer systems
 - Suitable for CLI, Web, or WASM environments
 
-The project emphasizes domain modeling and minimal shared mutable state.
 
+## Implemented Features
 
-## ✨ Implemented Features
+### Core Engine
 
 - Strongly-typed board and coordinate system
-- Ship modeling with placement validation
-- Turn-based shot resolution engine
-- Hit / Miss / Sunk detection logic
+- Ship placement validation
+- Turn-based shot handling
+- Hit / Miss / Sunk detection
 - AI opponent with state-aware targeting
-- Modular codebase structured for backend extensibility
-- Unit-testable core game state
+
+### Backend API
+
+- Axum-based HTTP server
+- Game session management
+- Event-based turn timeline
+- Snapshot endpoint for full game state
+- Health check endpoint
+- Input validation and structured API errors
+- Unit and integration tests
 
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Run the project
 
@@ -59,36 +67,46 @@ cargo test
 Tested with **Rust 1.93+**
 
 
-## 🗺️ Roadmap
+## API Overview
 
-### ✅ Phase 1 – Core Engine (Completed)
+### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Health check endpoint to verify that the backend service is running. |
+| POST | `/api/v1/game` | Creates a new game session and returns a unique `game_id`. |
+| GET | `/api/v1/game/{id}` | Retrieves the current snapshot of the game, including turn, status, and event history. |
+| POST | `/api/v1/game/{id}/fire` | Fires at a coordinate for the specified player and returns the resulting turn events. |
+
+
+## Roadmap
+
+### ✔️ Phase 1 – Core Engine
 
 - [x] Domain modeling (Board, Ship, Coord, GameState)
 - [x] Deterministic game state management
 - [x] AI opponent
-- [x] Turn-based resolution
+- [x] Turn-based shot handling
 - [x] Modular structure
 
 ---
 
-### 🚧 Phase 2 – Engine Hardening (In Progress)
+### ✔️ Phase 2 – Engine Hardening
 
-- [ ] Expanded unit tests
-- [ ] Edge-case validation
-- [ ] Public API stabilization
-- [ ] Improved AI targeting strategy
-- [ ] Error handling refinement
+- [x] Expanded unit tests
+- [x] Edge-case validation
+- [x] Improved AI targeting strategy
+- [x] Error handling refinement
 
 ---
 
-### 🌐 Phase 3 – Web Backend (Axum)
+### ✔️ Phase 3 – Web Backend (Axum)
 
-- [ ] Axum server setup
-- [ ] WebSocket integration
-- [ ] Game session management
-- [ ] Player matchmaking logic
-- [ ] State synchronization
-- [ ] Serde-based serialization
+- [x] Axum server setup
+- [x] Game session management
+- [x] State synchronization
+- [x] Serde-based serialization
+- [x] Core REST API implementation
 
 ---
 
@@ -99,7 +117,6 @@ Tested with **Rust 1.93+**
 - [ ] Real-time game updates via WebSocket
 - [ ] Visual feedback for hits/misses
 - [ ] Responsive layout
-- [ ] TypeScript integration
 
 ---
 
@@ -112,12 +129,10 @@ Tested with **Rust 1.93+**
 
 
 
-## 🛠 Planned Tech Stack
+## Planned Tech Stack
 
-**Core Engine**
+**Backend + API**
 - Rust
-
-**Backend**
 - Axum
 - Tokio
 - WebSockets
@@ -128,7 +143,7 @@ Tested with **Rust 1.93+**
 - TypeScript
 
 
-## 🤝 Contributing
+## Contributing
 
 Contributions, suggestions, and discussions are welcome.
 
@@ -143,11 +158,11 @@ Areas that are especially helpful:
 If you're interested, feel free to open an issue or start a discussion.
 
 
-## 🎯 Project Vision
+## Project Vision
 
 To build a clean, reusable Battleship engine that can serve as a foundation for a full-stack, real-time multiplayer application while demonstrating sound Rust architecture principles.
 
 
-## 📜 License
+## License
 
 This project is licensed under the MIT License. See the LICENSE file for details.
