@@ -1,18 +1,23 @@
+use serde::{Deserialize, Serialize};
+
 use super::coord::Coord;
 use super::player::{Player, ShotResult};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Turn {
     Player1,
     Player2,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum GameStatus {
     Ongoing,
     Finished,
 }
 
+#[derive(Debug)]
 pub enum GameError {
     GameAlreadyFinished,
     NotPlayersTurn,
@@ -114,8 +119,8 @@ mod tests {
         let (p1, p2) = setup_players();
         let mut game = GameState::new(p1, p2);
 
-        game.take_turn(Coord { row: 0, col: 0 });
-        game.take_turn(Coord { row: 0, col: 1 });
+        let _ = game.take_turn(Coord { row: 0, col: 0 });
+        let _ = game.take_turn(Coord { row: 0, col: 1 });
 
         assert!(matches!(game.status, GameStatus::Finished));
     }

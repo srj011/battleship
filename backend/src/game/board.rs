@@ -44,7 +44,7 @@ impl Board {
             .ok_or_else(|| "Ship out of bounds!".to_string())?;
 
             // Bounds check
-            if !self.within_bounds(coord) {
+            if !within_bounds(coord) {
                 return Err("Ship out of bounds!".into());
             }
 
@@ -78,10 +78,10 @@ impl Board {
             Cell::Hit | Cell::Miss => FireOutcome::AlreadyShot,
         }
     }
+}
 
-    pub fn within_bounds(&self, coord: Coord) -> bool {
-        coord.row < BOARD_SIZE && coord.col < BOARD_SIZE
-    }
+pub fn within_bounds(coord: Coord) -> bool {
+    coord.row < BOARD_SIZE && coord.col < BOARD_SIZE
 }
 
 pub enum FireOutcome {
@@ -165,4 +165,13 @@ mod tests {
             FireOutcome::AlreadyShot
         ));
     }
+}
+
+#[test]
+fn within_bounds_detects_invalid_coordinates() {
+    assert!(within_bounds(Coord { row: 0, col: 0 }));
+    assert!(within_bounds(Coord { row: 9, col: 9 }));
+
+    assert!(!within_bounds(Coord { row: 10, col: 0 }));
+    assert!(!within_bounds(Coord { row: 0, col: 10 }));
 }

@@ -1,4 +1,6 @@
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Coord {
     pub row: usize,
     pub col: usize,
@@ -21,5 +23,25 @@ impl Coord {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn offset_moves_correctly() {
+        let c = Coord::new(5, 5);
+        let next = c.offset(1, -1).unwrap();
+
+        assert_eq!(next.row, 6);
+        assert_eq!(next.col, 4);
+    }
+
+    #[test]
+    fn offset_prevents_negative_coordinates() {
+        let c = Coord::new(0, 0);
+        assert!(c.offset(-1, 0).is_none());
     }
 }
