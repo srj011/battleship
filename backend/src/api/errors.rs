@@ -8,6 +8,7 @@ use crate::game::game_state::GameError;
 pub enum ApiError {
     Game(GameError),
     SessionNotFound,
+    InvalidCoordinates,
 }
 
 impl From<GameError> for ApiError {
@@ -27,6 +28,9 @@ impl IntoResponse for ApiError {
             }
             ApiError::SessionNotFound => {
                 (StatusCode::BAD_REQUEST, "Session not found").into_response()
+            }
+            ApiError::InvalidCoordinates => {
+                (StatusCode::BAD_REQUEST, "Invalid coordinate").into_response()
             }
         }
     }

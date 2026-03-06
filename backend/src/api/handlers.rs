@@ -9,6 +9,7 @@ use uuid::Uuid;
 use super::errors::ApiError;
 use crate::app::game_session::{GameSnapshot, TurnOutcome};
 use crate::app::session_manager::SessionManager;
+use crate::game::board::within_bounds;
 use crate::game::coord::Coord;
 use crate::game::game_state::{GameError, Turn};
 
@@ -32,7 +33,8 @@ pub struct CreateGameResponse {
 #[derive(Deserialize)]
 pub struct FireRequest {
     player: Turn,
-    coord: Coord,
+    row: usize,
+    col: usize,
 }
 
 pub async fn root() -> &'static str {
@@ -75,7 +77,11 @@ pub async fn fire(
         .get_mut_session(&id)
         .ok_or(ApiError::SessionNotFound)?;
 
-    let outcome = session.player_fire(request.player, request.coord)?;
+    let coord = Coord::new(request.row, request.col);
+    if !within_bounds(coord) {
+        return Err(ApiError::InvalidCoordinates);
+    }
+    let outcome = session.player_fire(request.player, coord)?;
 
     Ok(Json(outcome))
 }
