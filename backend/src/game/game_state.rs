@@ -11,6 +11,7 @@ pub enum Turn {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum GameStatus {
     Ongoing,
     Finished,

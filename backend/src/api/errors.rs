@@ -1,7 +1,9 @@
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use serde::Serialize;
 
 use crate::game::game_state::GameError;
 
@@ -17,21 +19,29 @@ impl From<GameError> for ApiError {
     }
 }
 
-impl IntoResponse for ApiError {
-    fn into_response(self) -> Response {
+#[derive(Serialize)]
+pub struct ErrorResponse {
+    error: &'static str,
+}
+
+impl ApiError {
+    fn status_message(&self) -> (StatusCode, &'static str) {
         match self {
-            ApiError::Game(GameError::NotPlayersTurn) => {
-                (StatusCode::BAD_REQUEST, "Not your turn").into_response()
-            }
+            ApiError::SessionNotFound => (StatusCode::NOT_FOUND, "Session not found"),
+            ApiError::InvalidCoordinates => (StatusCode::BAD_REQUEST, "Invalid coordinate"),
+            ApiError::Game(GameError::NotPlayersTurn) => (StatusCode::BAD_REQUEST, "Not your turn"),
             ApiError::Game(GameError::GameAlreadyFinished) => {
-                (StatusCode::BAD_REQUEST, "Game already finished").into_response()
-            }
-            ApiError::SessionNotFound => {
-                (StatusCode::BAD_REQUEST, "Session not found").into_response()
-            }
-            ApiError::InvalidCoordinates => {
-                (StatusCode::BAD_REQUEST, "Invalid coordinate").into_response()
+                (StatusCode::BAD_REQUEST, "Game already finished")
             }
         }
+    }
+}
+
+impl IntoResponse for ApiError {
+    fn into_response(self) -> Response {
+        let (status, message) = self.status_message();
+        let body = Json(ErrorResponse { error: message });
+
+        (status, body).into_response()
     }
 }
