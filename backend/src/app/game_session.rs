@@ -5,18 +5,28 @@ use crate::game::coord::Coord;
 use crate::game::game_state::{GameError, GameState, GameStatus, Turn};
 use crate::game::player::{Player, ShotResult};
 
-const SHIP_LENGHTS: &[usize] = &[5, 4, 3, 3, 2];
+const SHIP_LENGTHS: &[usize] = &[5, 4, 3, 3, 2];
 
 #[derive(Clone, Copy, Serialize)]
-pub struct AiMove {
+pub struct TurnEvent {
+    player: Turn,
     coord: Coord,
     result: ShotResult,
 }
 
+impl TurnEvent {
+    pub fn new(player: Turn, coord: Coord, result: ShotResult) -> Self {
+        Self {
+            player,
+            coord,
+            result,
+        }
+    }
+}
+
 #[derive(Serialize)]
 pub struct TurnOutcome {
-    player_result: ShotResult,
-    ai_moves: Vec<AiMove>,
+    events: Vec<TurnEvent>,
     status: GameStatus,
 }
 
@@ -30,8 +40,8 @@ impl GameSession {
         let mut player1 = Player::new();
         let mut player2 = Player::new();
 
-        player1.place_random_ships(SHIP_LENGHTS);
-        player2.place_random_ships(SHIP_LENGHTS);
+        player1.place_random_ships(SHIP_LENGTHS);
+        player2.place_random_ships(SHIP_LENGTHS);
 
         let game = GameState::new(player1, player2);
         let ai = Some(AiPlayer::new());
@@ -64,8 +74,10 @@ impl GameSession {
             return Err(GameError::NotPlayersTurn);
         }
 
+        let mut events = Vec::new();
+
         let player_result = self.game.take_turn(coord)?;
-        let mut ai_moves = Vec::new();
+        events.push(TurnEvent::new(acting_player, coord, player_result));
 
         if let Some(ai) = &mut self.ai {
             while self.game.status() == GameStatus::Ongoing
@@ -80,10 +92,7 @@ impl GameSession {
 
                 ai.process_result(ai_coord, ai_result);
 
-                ai_moves.push(AiMove {
-                    coord: ai_coord,
-                    result: ai_result,
-                });
+                events.push(TurnEvent::new(Turn::Player2, ai_coord, ai_result));
 
                 if ai_result == ShotResult::Miss {
                     break;
@@ -92,8 +101,7 @@ impl GameSession {
         }
 
         Ok(TurnOutcome {
-            player_result,
-            ai_moves,
+            events,
             status: self.game.status(),
         })
     }
