@@ -76,33 +76,45 @@ impl GameSession {
 
         let mut events = Vec::new();
 
-        let player_result = self.game.take_turn(coord)?;
-        events.push(TurnEvent::new(acting_player, coord, player_result));
+        // Player turn
+        self.record_turn(&mut events, acting_player, coord)?;
 
-        if let Some(ai) = &mut self.ai {
+        // AI turn
+        if let Some(mut ai) = self.ai.take() {
             while self.game.status() == GameStatus::Ongoing
                 && self.game.current_turn() == Turn::Player2
             {
                 let ai_coord = ai.next_shot();
-                let ai_result = self.game.take_turn(ai_coord)?;
+                let ai_event = self.record_turn(&mut events, Turn::Player2, ai_coord)?;
 
-                if ai_result == ShotResult::AlreadyShot {
+                if ai_event.result == ShotResult::AlreadyShot {
                     panic!("AI fired at an already-shot cell {ai_coord:?}");
                 }
 
-                ai.process_result(ai_coord, ai_result);
+                ai.process_result(ai_coord, ai_event.result);
 
-                events.push(TurnEvent::new(Turn::Player2, ai_coord, ai_result));
-
-                if ai_result == ShotResult::Miss {
+                if ai_event.result == ShotResult::Miss {
                     break;
                 }
             }
+
+            self.ai = Some(ai);
         }
 
         Ok(TurnOutcome {
             events,
             status: self.game.status(),
         })
+    }
+
+    fn record_turn(
+        &mut self,
+        events: &mut Vec<TurnEvent>,
+        player: Turn,
+        coord: Coord,
+    ) -> Result<TurnEvent, GameError> {
+        let event = TurnEvent::new(player, coord, self.game.take_turn(coord)?);
+        events.push(event);
+        Ok(event)
     }
 }
