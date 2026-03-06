@@ -1,10 +1,11 @@
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use super::game_session::GameSession;
 
 pub struct SessionManager {
-    sessions: HashMap<Uuid, GameSession>,
+    sessions: HashMap<Uuid, Arc<Mutex<GameSession>>>,
 }
 
 impl SessionManager {
@@ -14,26 +15,20 @@ impl SessionManager {
         }
     }
 
-    pub fn get_session(&self, id: &Uuid) -> Option<&GameSession> {
-        self.sessions.get(id)
-    }
-
-    pub fn get_mut_session(&mut self, id: &Uuid) -> Option<&mut GameSession> {
-        self.sessions.get_mut(id)
+    pub fn get_session(&self, id: &Uuid) -> Option<Arc<Mutex<GameSession>>> {
+        self.sessions.get(id).cloned()
     }
 
     pub fn create_vs_ai(&mut self) -> Uuid {
         let id = Uuid::new_v4();
-        let session = GameSession::new_vs_ai();
-
+        let session = Arc::new(Mutex::new(GameSession::new_vs_ai()));
         self.sessions.insert(id, session);
         id
     }
 
     pub fn create_multiplayer(&mut self) -> Uuid {
         let id = Uuid::new_v4();
-        let session = GameSession::new_vs_multiplayer();
-
+        let session = Arc::new(Mutex::new(GameSession::new_vs_multiplayer()));
         self.sessions.insert(id, session);
         id
     }

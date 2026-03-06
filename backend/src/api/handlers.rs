@@ -59,9 +59,11 @@ pub async fn get_game(
     Path(id): Path<Uuid>,
     State(manager): State<Arc<Mutex<SessionManager>>>,
 ) -> Result<Json<GameSnapshot>, ApiError> {
-    let manager = manager.lock().unwrap();
-
-    let session = manager.get_session(&id).ok_or(ApiError::SessionNotFound)?;
+    let session = {
+        let manager = manager.lock().unwrap();
+        manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
+    };
+    let session = session.lock().unwrap();
 
     Ok(Json(session.snapshot()))
 }
@@ -71,16 +73,18 @@ pub async fn fire(
     State(manager): State<Arc<Mutex<SessionManager>>>,
     Json(request): Json<FireRequest>,
 ) -> Result<Json<TurnOutcome>, ApiError> {
-    let mut manager = manager.lock().unwrap();
-
-    let session = manager
-        .get_mut_session(&id)
-        .ok_or(ApiError::SessionNotFound)?;
-
     let coord = Coord::new(request.row, request.col);
+
     if !within_bounds(coord) {
         return Err(ApiError::InvalidCoordinates);
     }
+
+    let session = {
+        let manager = manager.lock().unwrap();
+        manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
+    };
+    let mut session = session.lock().unwrap();
+
     let outcome = session.player_fire(request.player, coord)?;
 
     Ok(Json(outcome))
