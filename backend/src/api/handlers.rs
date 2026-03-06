@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, State},
 };
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
@@ -37,8 +38,8 @@ pub struct FireRequest {
     col: usize,
 }
 
-pub async fn root() -> &'static str {
-    "Battleship backend running"
+pub async fn health() -> Json<serde_json::Value> {
+    Json(json!({ "status": "ok" }))
 }
 
 pub async fn create_game(
