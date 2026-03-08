@@ -127,17 +127,13 @@ mod tests {
 
         p1.place_ship(
             ShipType::PatrolBoat,
-            Coord { row: 0, col: 0 },
+            Coord::new(0, 0),
             Direction::Horizontal,
         )
         .unwrap();
 
-        p2.place_ship(
-            ShipType::Carrier,
-            Coord { row: 0, col: 0 },
-            Direction::Horizontal,
-        )
-        .unwrap();
+        p2.place_ship(ShipType::Carrier, Coord::new(0, 0), Direction::Horizontal)
+            .unwrap();
 
         (p1, p2)
     }
@@ -148,7 +144,7 @@ mod tests {
         let mut game = GameState::new(p1, p2);
 
         // Player1 fires miss
-        let _ = game.take_turn(Coord { row: 5, col: 5 });
+        let _ = game.take_turn(Coord::new(5, 5));
 
         // Next turn should belong to Player2
         assert!(matches!(game.current_turn, Turn::Player2));
@@ -159,8 +155,8 @@ mod tests {
         let (p1, p2) = setup_players();
         let mut game = GameState::new(p1, p2);
 
-        let _ = game.take_turn(Coord { row: 0, col: 0 });
-        let _ = game.take_turn(Coord { row: 0, col: 1 });
+        let _ = game.take_turn(Coord::new(0, 0));
+        let _ = game.take_turn(Coord::new(0, 1));
 
         assert!(matches!(game.status, GameStatus::Winner(Turn::Player1)));
     }

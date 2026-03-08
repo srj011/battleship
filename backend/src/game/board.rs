@@ -24,7 +24,7 @@ impl Board {
     }
 
     pub fn get_cell(&self, coord: Coord) -> Cell {
-        self.grid[coord.row][coord.col]
+        self.grid[coord.row()][coord.col()]
     }
 
     pub fn place_ship(
@@ -50,7 +50,7 @@ impl Board {
             }
 
             // Overlap check
-            if self.grid[coord.row][coord.col] != Cell::Empty {
+            if self.get_cell(coord) != Cell::Empty {
                 return Err(PlacementError::ShipOverlap);
             }
 
@@ -58,21 +58,21 @@ impl Board {
         }
 
         for coord in &positions {
-            self.grid[coord.row][coord.col] = Cell::Ship(ship_type);
+            self.grid[coord.row()][coord.col()] = Cell::Ship(ship_type);
         }
 
         Ok(positions)
     }
 
     pub fn fire_at(&mut self, coord: Coord) -> FireOutcome {
-        match self.grid[coord.row][coord.col] {
+        match self.get_cell(coord) {
             Cell::Empty => {
-                self.grid[coord.row][coord.col] = Cell::Miss;
+                self.grid[coord.row()][coord.col()] = Cell::Miss;
                 FireOutcome::Miss
             }
 
             Cell::Ship(ship_type) => {
-                self.grid[coord.row][coord.col] = Cell::Hit(ship_type);
+                self.grid[coord.row()][coord.col()] = Cell::Hit(ship_type);
                 FireOutcome::Hit(ship_type)
             }
 
@@ -82,7 +82,7 @@ impl Board {
 }
 
 pub fn within_bounds(coord: Coord) -> bool {
-    coord.row < BOARD_SIZE && coord.col < BOARD_SIZE
+    coord.row() < BOARD_SIZE && coord.col() < BOARD_SIZE
 }
 
 pub enum FireOutcome {
@@ -101,11 +101,7 @@ mod tests {
     fn place_ship_within_bounds() {
         let mut board = Board::new();
 
-        let result = board.place_ship(
-            Coord { row: 0, col: 0 },
-            Direction::Horizontal,
-            ShipType::Destroyer,
-        );
+        let result = board.place_ship(Coord::new(0, 0), Direction::Horizontal, ShipType::Destroyer);
 
         assert!(result.is_ok());
     }
@@ -115,10 +111,7 @@ mod tests {
         let mut board = Board::new();
 
         let result = board.place_ship(
-            Coord {
-                row: 0,
-                col: BOARD_SIZE - 1,
-            },
+            Coord::new(0, BOARD_SIZE - 1),
             Direction::Horizontal,
             ShipType::Submarine,
         );
@@ -131,18 +124,10 @@ mod tests {
         let mut board = Board::new();
 
         board
-            .place_ship(
-                Coord { row: 0, col: 0 },
-                Direction::Horizontal,
-                ShipType::Destroyer,
-            )
+            .place_ship(Coord::new(0, 0), Direction::Horizontal, ShipType::Destroyer)
             .unwrap();
 
-        let result = board.place_ship(
-            Coord { row: 0, col: 1 },
-            Direction::Vertical,
-            ShipType::Submarine,
-        );
+        let result = board.place_ship(Coord::new(0, 1), Direction::Vertical, ShipType::Submarine);
 
         assert!(result.is_err());
     }
@@ -153,31 +138,28 @@ mod tests {
 
         board
             .place_ship(
-                Coord { row: 0, col: 0 },
+                Coord::new(0, 0),
                 Direction::Horizontal,
                 ShipType::PatrolBoat,
             )
             .unwrap();
 
         assert!(matches!(
-            board.fire_at(Coord { row: 0, col: 0 }),
+            board.fire_at(Coord::new(0, 0)),
             FireOutcome::Hit(_)
         ));
 
-        assert!(matches!(
-            board.fire_at(Coord { row: 5, col: 5 }),
-            FireOutcome::Miss
-        ));
+        assert!(matches!(board.fire_at(Coord::new(5, 5)), FireOutcome::Miss));
     }
 
     #[test]
     fn firing_twice_returns_already_shot() {
         let mut board = Board::new();
 
-        board.fire_at(Coord { row: 5, col: 5 });
+        board.fire_at(Coord::new(5, 5));
 
         assert!(matches!(
-            board.fire_at(Coord { row: 5, col: 5 }),
+            board.fire_at(Coord::new(5, 5)),
             FireOutcome::AlreadyShot
         ));
     }
@@ -185,9 +167,9 @@ mod tests {
 
 #[test]
 fn within_bounds_detects_invalid_coordinates() {
-    assert!(within_bounds(Coord { row: 0, col: 0 }));
-    assert!(within_bounds(Coord { row: 9, col: 9 }));
+    assert!(within_bounds(Coord::new(0, 0)));
+    assert!(within_bounds(Coord::new(9, 9)));
 
-    assert!(!within_bounds(Coord { row: 10, col: 0 }));
-    assert!(!within_bounds(Coord { row: 0, col: 10 }));
+    assert!(!within_bounds(Coord::new(10, 0)));
+    assert!(!within_bounds(Coord::new(0, 10)));
 }
