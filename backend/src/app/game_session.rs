@@ -185,7 +185,7 @@ mod tests {
         let mut session = GameSession::new_vs_ai();
 
         for _ in 0..500 {
-            if session.status() == GameStatus::Finished {
+            if matches!(session.status(), GameStatus::Winner(_)) {
                 return;
             }
 

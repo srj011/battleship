@@ -15,13 +15,13 @@ pub enum Turn {
 #[serde(rename_all = "lowercase")]
 pub enum GameStatus {
     Ongoing,
-    Finished,
+    Winner(Turn),
 }
 
 pub struct GameState {
     player1: Player,
     player2: Player,
-    turn: Turn,
+    current_turn: Turn,
     status: GameStatus,
 }
 
@@ -30,7 +30,7 @@ impl GameState {
         Self {
             player1,
             player2,
-            turn: Turn::Player1,
+            current_turn: Turn::Player1,
             status: GameStatus::Ongoing,
         }
     }
@@ -40,26 +40,26 @@ impl GameState {
     }
 
     pub fn current_turn(&self) -> Turn {
-        self.turn
+        self.current_turn
     }
 
     pub fn take_turn(&mut self, coord: Coord) -> Result<ShotResult, GameError> {
-        if let GameStatus::Finished = self.status {
+        if let GameStatus::Winner(_) = self.status {
             return Err(GameError::GameAlreadyFinished);
         }
 
-        let result = match self.turn {
+        let result = match self.current_turn {
             Turn::Player1 => self.player2.fire_at(coord),
             Turn::Player2 => self.player1.fire_at(coord),
         };
 
-        let opponent_lost = match self.turn {
+        let opponent_lost = match self.current_turn {
             Turn::Player1 => self.player2.has_lost(),
             Turn::Player2 => self.player1.has_lost(),
         };
 
         if opponent_lost {
-            self.status = GameStatus::Finished;
+            self.status = GameStatus::Winner(self.current_turn);
             return Ok(result);
         }
 
@@ -71,7 +71,7 @@ impl GameState {
     }
 
     fn switch_turn(&mut self) {
-        self.turn = match self.turn {
+        self.current_turn = match self.current_turn {
             Turn::Player1 => Turn::Player2,
             Turn::Player2 => Turn::Player1,
         };
@@ -89,7 +89,7 @@ mod tests {
         let mut p2 = Player::new();
 
         p1.place_ship(
-            ShipType::Battleship,
+            ShipType::PatrolBoat,
             Coord { row: 0, col: 0 },
             Direction::Horizontal,
         )
@@ -114,7 +114,7 @@ mod tests {
         let _ = game.take_turn(Coord { row: 5, col: 5 });
 
         // Next turn should belong to Player2
-        assert!(matches!(game.turn, Turn::Player2));
+        assert!(matches!(game.current_turn, Turn::Player2));
     }
 
     #[test]
@@ -125,6 +125,6 @@ mod tests {
         let _ = game.take_turn(Coord { row: 0, col: 0 });
         let _ = game.take_turn(Coord { row: 0, col: 1 });
 
-        assert!(matches!(game.status, GameStatus::Finished));
+        assert!(matches!(game.status, GameStatus::Winner(Turn::Player1)));
     }
 }
