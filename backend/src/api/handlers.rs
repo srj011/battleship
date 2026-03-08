@@ -2,41 +2,16 @@ use axum::{
     Json,
     extract::{Path, State},
 };
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use super::errors::ApiError;
+use super::types::*;
 use crate::app::game_session::{GameSnapshot, TurnOutcome};
 use crate::app::session_manager::SessionManager;
 use crate::game::board::within_bounds;
 use crate::game::coord::Coord;
-use crate::game::game_state::Turn;
-
-#[derive(Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum GameMode {
-    Ai,
-    Multiplayer,
-}
-
-#[derive(Deserialize)]
-pub struct CreateGameRequest {
-    mode: GameMode,
-}
-
-#[derive(Serialize)]
-pub struct CreateGameResponse {
-    game_id: Uuid,
-}
-
-#[derive(Deserialize)]
-pub struct FireRequest {
-    player: Turn,
-    row: usize,
-    col: usize,
-}
 
 pub async fn health() -> Json<serde_json::Value> {
     Json(json!({ "status": "ok" }))
