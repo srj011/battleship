@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use super::board::{BOARD_SIZE, Board, Cell, FireOutcome};
 use super::coord::Coord;
-use super::ship::{Direction, Ship};
+use super::ship::{Direction, FLEET, Ship, ShipType};
 
 pub struct Player {
     board: Board,
@@ -20,25 +20,30 @@ impl Player {
 
     pub fn place_ship(
         &mut self,
+        ship_type: ShipType,
         start: Coord,
-        length: usize,
         direction: Direction,
     ) -> Result<(), String> {
+        if self.ships.iter().any(|ship| ship.ship_type() == ship_type) {
+            return Err("Ship already placed".to_string());
+        }
+
         let ship_index = self.ships.len();
+        let length = ship_type.length();
 
         let positions = self
             .board
             .place_ship(start, length, direction, ship_index)?;
 
-        self.ships.push(Ship::new(positions));
+        self.ships.push(Ship::new(ship_type, positions));
 
         Ok(())
     }
 
-    pub fn place_random_ships(&mut self, ship_lengths: &[usize]) {
+    pub fn place_random_ships(&mut self) {
         let mut rng = rand::rng();
 
-        for &length in ship_lengths {
+        for ship in FLEET {
             loop {
                 let row = rng.random_range(0..BOARD_SIZE);
                 let col = rng.random_range(0..BOARD_SIZE);
@@ -50,7 +55,7 @@ impl Player {
                     Direction::Vertical
                 };
 
-                if self.place_ship(coord, length, direction).is_ok() {
+                if self.place_ship(ship, coord, direction).is_ok() {
                     break;
                 }
             }
@@ -115,11 +120,16 @@ mod tests {
         let mut player = Player::new();
 
         player
-            .place_ship(Coord { row: 0, col: 0 }, 2, Direction::Horizontal)
+            .place_ship(
+                ShipType::Submarine,
+                Coord { row: 0, col: 0 },
+                Direction::Horizontal,
+            )
             .unwrap();
 
         player.fire_at(Coord { row: 0, col: 0 });
         player.fire_at(Coord { row: 0, col: 1 });
+        player.fire_at(Coord { row: 0, col: 2 });
 
         assert!(player.has_lost());
     }
@@ -129,7 +139,11 @@ mod tests {
         let mut player = Player::new();
 
         player
-            .place_ship(Coord { row: 0, col: 0 }, 2, Direction::Horizontal)
+            .place_ship(
+                ShipType::PatrolBoat,
+                Coord { row: 0, col: 0 },
+                Direction::Horizontal,
+            )
             .unwrap();
 
         assert!(matches!(

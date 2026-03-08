@@ -1,23 +1,64 @@
+use serde::{Deserialize, Serialize};
+
 use crate::game::coord::Coord;
 
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ShipType {
+    Carrier,
+    Battleship,
+    Destroyer,
+    Submarine,
+    PatrolBoat,
+}
+
+impl ShipType {
+    pub fn length(&self) -> usize {
+        match self {
+            Self::Carrier => 5,
+            Self::Battleship => 4,
+            Self::Destroyer => 3,
+            Self::Submarine => 3,
+            Self::PatrolBoat => 2,
+        }
+    }
+}
+
+pub const FLEET: [ShipType; 5] = [
+    ShipType::Carrier,
+    ShipType::Battleship,
+    ShipType::Destroyer,
+    ShipType::Submarine,
+    ShipType::PatrolBoat,
+];
+
 pub struct Ship {
+    ship_type: ShipType,
     positions: Vec<Coord>,
     hits: usize,
 }
 
 impl Ship {
-    pub fn new(positions: Vec<Coord>) -> Self {
-        Self { positions, hits: 0 }
+    pub fn new(ship_type: ShipType, positions: Vec<Coord>) -> Self {
+        Self {
+            ship_type,
+            positions,
+            hits: 0,
+        }
+    }
+
+    pub fn ship_type(&self) -> ShipType {
+        self.ship_type
     }
 
     pub fn register_hit(&mut self) {
-        if self.hits < self.positions.len() {
+        if self.hits < self.ship_type.length() {
             self.hits += 1;
         }
     }
 
     pub fn is_sunk(&self) -> bool {
-        self.hits == self.positions.len()
+        self.hits == self.ship_type.length()
     }
 }
 

@@ -87,17 +87,25 @@ impl GameState {
 mod tests {
     use super::*;
     use crate::game::coord::Coord;
-    use crate::game::ship::Direction;
+    use crate::game::ship::{Direction, ShipType};
 
     fn setup_players() -> (Player, Player) {
         let mut p1 = Player::new();
         let mut p2 = Player::new();
 
-        p1.place_ship(Coord { row: 0, col: 0 }, 2, Direction::Horizontal)
-            .unwrap();
+        p1.place_ship(
+            ShipType::Battleship,
+            Coord { row: 0, col: 0 },
+            Direction::Horizontal,
+        )
+        .unwrap();
 
-        p2.place_ship(Coord { row: 0, col: 0 }, 2, Direction::Horizontal)
-            .unwrap();
+        p2.place_ship(
+            ShipType::Carrier,
+            Coord { row: 0, col: 0 },
+            Direction::Horizontal,
+        )
+        .unwrap();
 
         (p1, p2)
     }

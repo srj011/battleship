@@ -5,8 +5,6 @@ use crate::game::coord::Coord;
 use crate::game::game_state::{GameError, GameState, GameStatus, Turn};
 use crate::game::player::{Player, ShotResult};
 
-const SHIP_LENGTHS: &[usize] = &[5, 4, 3, 3, 2];
-
 #[derive(Clone, Copy, Serialize)]
 pub struct TurnEvent {
     player: Turn,
@@ -48,8 +46,8 @@ impl GameSession {
         let mut player1 = Player::new();
         let mut player2 = Player::new();
 
-        player1.place_random_ships(SHIP_LENGTHS);
-        player2.place_random_ships(SHIP_LENGTHS);
+        player1.place_random_ships();
+        player2.place_random_ships();
 
         let game = GameState::new(player1, player2);
         let ai = Some(AiPlayer::new());
