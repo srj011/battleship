@@ -6,6 +6,12 @@ use super::coord::Coord;
 use super::errors::PlacementError;
 use super::ship::{Direction, FLEET, Ship, ShipType};
 
+pub struct ShipPlacement {
+    ship_type: ShipType,
+    start: Coord,
+    direction: Direction,
+}
+
 pub struct Player {
     board: Board,
     ships: Vec<Ship>,
@@ -31,7 +37,7 @@ impl Player {
         Ok(())
     }
 
-    pub fn place_random_ships(&mut self) {
+    pub fn place_random_ships(&mut self) -> Result<(), PlacementError> {
         // Used only by AI player during initialization
         // Assumes board and ship list are empty
         let mut rng = rand::rng();
@@ -58,11 +64,37 @@ impl Player {
                 };
                 let coord = Coord::new(row, col);
 
-                if self.place_ship(ship, coord, direction).is_ok() {
-                    break;
-                }
+                let positions = self.board.place_ship(coord, direction, ship)?;
+                self.ships.push(Ship::new(ship, positions));
             }
         }
+        Ok(())
+    }
+
+    pub fn place_fleet(&mut self, placements: Vec<ShipPlacement>) -> Result<(), PlacementError> {
+        if placements.len() != FLEET.len() {
+            return Err(PlacementError::InvalidFleetSize);
+        }
+
+        let mut temp_board = Board::new();
+        let mut temp_ships: Vec<Ship> = Vec::new();
+        let mut added_ships = std::collections::HashSet::new();
+
+        for placement in placements {
+            // Check for duplicate ship types
+            if !added_ships.insert(placement.ship_type) {
+                return Err(PlacementError::ShipAlreadyPlaced);
+            }
+
+            let positions: Vec<Coord> =
+                temp_board.place_ship(placement.start, placement.direction, placement.ship_type)?;
+            temp_ships.push(Ship::new(placement.ship_type, positions));
+        }
+
+        self.board = temp_board;
+        self.ships = temp_ships;
+
+        Ok(())
     }
 
     pub fn get_ship_mut(&mut self, ship_type: ShipType) -> &mut Ship {

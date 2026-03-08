@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::game::coord::Coord;
 
-#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ShipType {
     Carrier,
@@ -62,6 +62,7 @@ impl Ship {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum Direction {
     Horizontal,
     Vertical,
