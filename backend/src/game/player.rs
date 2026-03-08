@@ -3,6 +3,7 @@ use serde::Serialize;
 
 use super::board::{BOARD_SIZE, Board, Cell, FireOutcome};
 use super::coord::Coord;
+use super::errors::PlacementError;
 use super::ship::{Direction, FLEET, Ship, ShipType};
 
 pub struct Player {
@@ -23,9 +24,9 @@ impl Player {
         ship_type: ShipType,
         start: Coord,
         direction: Direction,
-    ) -> Result<(), String> {
+    ) -> Result<(), PlacementError> {
         if self.ships.iter().any(|ship| ship.ship_type() == ship_type) {
-            return Err("Ship already placed".to_string());
+            return Err(PlacementError::ShipAlreadyPlaced);
         }
 
         let ship_index = self.ships.len();

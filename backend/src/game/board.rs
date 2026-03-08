@@ -1,4 +1,5 @@
 use super::coord::Coord;
+use super::errors::PlacementError;
 use super::ship::Direction;
 
 pub const BOARD_SIZE: usize = 10;
@@ -32,7 +33,7 @@ impl Board {
         length: usize,
         direction: Direction,
         ship_index: usize,
-    ) -> Result<Vec<Coord>, String> {
+    ) -> Result<Vec<Coord>, PlacementError> {
         let mut positions: Vec<Coord> = Vec::new();
 
         for i in 0..length {
@@ -41,16 +42,16 @@ impl Board {
                 Direction::Horizontal => start.offset(0, i as isize),
                 Direction::Vertical => start.offset(i as isize, 0),
             }
-            .ok_or_else(|| "Ship out of bounds!".to_string())?;
+            .ok_or_else(|| PlacementError::ShipOutOfBounds)?;
 
             // Bounds check
             if !within_bounds(coord) {
-                return Err("Ship out of bounds!".into());
+                return Err(PlacementError::ShipOutOfBounds);
             }
 
             // Overlap check
             if self.grid[coord.row][coord.col] != Cell::Empty {
-                return Err("Ship overlaps another ship!".into());
+                return Err(PlacementError::ShipOverlap);
             }
 
             positions.push(coord);
