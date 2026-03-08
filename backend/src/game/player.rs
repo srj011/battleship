@@ -25,36 +25,38 @@ impl Player {
         start: Coord,
         direction: Direction,
     ) -> Result<(), PlacementError> {
-        if self.ships.iter().any(|ship| ship.ship_type() == ship_type) {
-            return Err(PlacementError::ShipAlreadyPlaced);
-        }
-
-        let ship_index = self.ships.len();
-        let length = ship_type.length();
-
-        let positions = self
-            .board
-            .place_ship(start, length, direction, ship_index)?;
-
+        let positions = self.board.place_ship(start, direction, ship_type)?;
         self.ships.push(Ship::new(ship_type, positions));
 
         Ok(())
     }
 
     pub fn place_random_ships(&mut self) {
+        // Used only by AI player during initialization
+        // Assumes board and ship list are empty
         let mut rng = rand::rng();
 
         for ship in FLEET {
-            loop {
-                let row = rng.random_range(0..BOARD_SIZE);
-                let col = rng.random_range(0..BOARD_SIZE);
-                let coord = Coord { row, col };
+            let length = ship.length();
 
+            loop {
                 let direction = if rng.random_bool(0.5) {
                     Direction::Horizontal
                 } else {
                     Direction::Vertical
                 };
+
+                let (row, col) = match direction {
+                    Direction::Horizontal => (
+                        rng.random_range(0..BOARD_SIZE),
+                        rng.random_range(0..=BOARD_SIZE - length),
+                    ),
+                    Direction::Vertical => (
+                        rng.random_range(0..=BOARD_SIZE - length),
+                        rng.random_range(0..BOARD_SIZE),
+                    ),
+                };
+                let coord = Coord::new(row, col);
 
                 if self.place_ship(ship, coord, direction).is_ok() {
                     break;
@@ -63,13 +65,20 @@ impl Player {
         }
     }
 
+    pub fn get_ship_mut(&mut self, ship_type: ShipType) -> &mut Ship {
+        self.ships
+            .iter_mut()
+            .find(|s| s.ship_type() == ship_type)
+            .expect("Ship not found")
+    }
+
     pub fn fire_at(&mut self, coord: Coord) -> ShotResult {
         match self.board.fire_at(coord) {
             FireOutcome::Miss => ShotResult::Miss,
             FireOutcome::AlreadyShot => ShotResult::AlreadyShot,
 
-            FireOutcome::Hit(index) => {
-                let ship = &mut self.ships[index];
+            FireOutcome::Hit(ship_type) => {
+                let ship = self.get_ship_mut(ship_type);
                 ship.register_hit();
 
                 if ship.is_sunk() {
@@ -90,7 +99,7 @@ impl Player {
             let coord = Coord { row, col };
 
             match self.board.get_cell(coord) {
-                Cell::Hit | Cell::Miss => continue,
+                Cell::Hit(_) | Cell::Miss => continue,
                 _ => return coord,
             }
         }

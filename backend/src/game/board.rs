@@ -1,14 +1,14 @@
 use super::coord::Coord;
 use super::errors::PlacementError;
-use super::ship::Direction;
+use super::ship::{Direction, ShipType};
 
 pub const BOARD_SIZE: usize = 10;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Cell {
     Empty,
-    Ship(usize),
-    Hit,
+    Ship(ShipType),
+    Hit(ShipType),
     Miss,
 }
 
@@ -30,11 +30,11 @@ impl Board {
     pub fn place_ship(
         &mut self,
         start: Coord,
-        length: usize,
         direction: Direction,
-        ship_index: usize,
+        ship_type: ShipType,
     ) -> Result<Vec<Coord>, PlacementError> {
         let mut positions: Vec<Coord> = Vec::new();
+        let length = ship_type.length();
 
         for i in 0..length {
             // Calculate coordinate for each iteration
@@ -58,7 +58,7 @@ impl Board {
         }
 
         for coord in &positions {
-            self.grid[coord.row][coord.col] = Cell::Ship(ship_index);
+            self.grid[coord.row][coord.col] = Cell::Ship(ship_type);
         }
 
         Ok(positions)
@@ -71,12 +71,12 @@ impl Board {
                 FireOutcome::Miss
             }
 
-            Cell::Ship(index) => {
-                self.grid[coord.row][coord.col] = Cell::Hit;
-                FireOutcome::Hit(index)
+            Cell::Ship(ship_type) => {
+                self.grid[coord.row][coord.col] = Cell::Hit(ship_type);
+                FireOutcome::Hit(ship_type)
             }
 
-            Cell::Hit | Cell::Miss => FireOutcome::AlreadyShot,
+            Cell::Hit(_) | Cell::Miss => FireOutcome::AlreadyShot,
         }
     }
 }
@@ -86,7 +86,7 @@ pub fn within_bounds(coord: Coord) -> bool {
 }
 
 pub enum FireOutcome {
-    Hit(usize),
+    Hit(ShipType),
     Miss,
     AlreadyShot,
 }
@@ -101,7 +101,11 @@ mod tests {
     fn place_ship_within_bounds() {
         let mut board = Board::new();
 
-        let result = board.place_ship(Coord { row: 0, col: 0 }, 3, Direction::Horizontal, 0);
+        let result = board.place_ship(
+            Coord { row: 0, col: 0 },
+            Direction::Horizontal,
+            ShipType::Destroyer,
+        );
 
         assert!(result.is_ok());
     }
@@ -115,9 +119,8 @@ mod tests {
                 row: 0,
                 col: BOARD_SIZE - 1,
             },
-            3,
             Direction::Horizontal,
-            0,
+            ShipType::Submarine,
         );
 
         assert!(result.is_err());
@@ -128,10 +131,18 @@ mod tests {
         let mut board = Board::new();
 
         board
-            .place_ship(Coord { row: 0, col: 0 }, 3, Direction::Horizontal, 0)
+            .place_ship(
+                Coord { row: 0, col: 0 },
+                Direction::Horizontal,
+                ShipType::Destroyer,
+            )
             .unwrap();
 
-        let result = board.place_ship(Coord { row: 0, col: 1 }, 3, Direction::Vertical, 1);
+        let result = board.place_ship(
+            Coord { row: 0, col: 1 },
+            Direction::Vertical,
+            ShipType::Submarine,
+        );
 
         assert!(result.is_err());
     }
@@ -141,7 +152,11 @@ mod tests {
         let mut board = Board::new();
 
         board
-            .place_ship(Coord { row: 0, col: 0 }, 2, Direction::Horizontal, 0)
+            .place_ship(
+                Coord { row: 0, col: 0 },
+                Direction::Horizontal,
+                ShipType::PatrolBoat,
+            )
             .unwrap();
 
         assert!(matches!(
