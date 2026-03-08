@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::coord::Coord;
+use super::errors::GameError;
 use super::player::{Player, ShotResult};
 
 #[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -15,12 +16,6 @@ pub enum Turn {
 pub enum GameStatus {
     Ongoing,
     Finished,
-}
-
-#[derive(Debug)]
-pub enum GameError {
-    GameAlreadyFinished,
-    NotPlayersTurn,
 }
 
 pub struct GameState {

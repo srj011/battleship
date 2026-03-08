@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Serialize;
 
-use crate::game::game_state::GameError;
+use crate::game::errors::GameError;
 
 pub enum ApiError {
     Game(GameError),

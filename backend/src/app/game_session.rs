@@ -2,7 +2,8 @@ use serde::Serialize;
 
 use crate::game::ai::AiPlayer;
 use crate::game::coord::Coord;
-use crate::game::game_state::{GameError, GameState, GameStatus, Turn};
+use crate::game::errors::GameError;
+use crate::game::game_state::{GameState, GameStatus, Turn};
 use crate::game::player::{Player, ShotResult};
 
 #[derive(Clone, Copy, Serialize)]
