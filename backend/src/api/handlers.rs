@@ -49,7 +49,7 @@ pub async fn fire(
     State(manager): State<Arc<Mutex<SessionManager>>>,
     Json(request): Json<FireRequest>,
 ) -> Result<Json<TurnOutcome>, ApiError> {
-    let coord = Coord::new(request.row, request.col);
+    let coord: Coord = request.coord.try_into()?;
 
     if !within_bounds(coord) {
         return Err(ApiError::InvalidCoordinates);
