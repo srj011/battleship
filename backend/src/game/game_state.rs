@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use super::coord::Coord;
 use super::errors::GameError;
-use super::player::{Player, ShipPlacement, ShotResult};
+use super::player::{Player, ShotResult};
+use super::ship::ShipPlacement;
 
 #[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

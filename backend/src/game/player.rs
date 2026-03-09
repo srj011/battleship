@@ -1,16 +1,11 @@
 use rand::prelude::*;
 use serde::Serialize;
+use std::collections::HashSet;
 
 use super::board::{BOARD_SIZE, Board, Cell, FireOutcome};
 use super::coord::Coord;
 use super::errors::PlacementError;
-use super::ship::{Direction, FLEET, Ship, ShipType};
-
-pub struct ShipPlacement {
-    ship_type: ShipType,
-    start: Coord,
-    direction: Direction,
-}
+use super::ship::{Direction, FLEET, Ship, ShipPlacement, ShipType};
 
 pub struct Player {
     board: Board,
@@ -25,74 +20,22 @@ impl Player {
         }
     }
 
-    pub fn place_ship(
-        &mut self,
-        ship_type: ShipType,
-        start: Coord,
-        direction: Direction,
-    ) -> Result<(), PlacementError> {
-        let positions = self.board.place_ship(start, direction, ship_type)?;
-        self.ships.push(Ship::new(ship_type, positions));
-
-        Ok(())
-    }
-
-    pub fn place_random_ships(&mut self) -> Result<(), PlacementError> {
-        // Used only by AI player during initialization
-        // Assumes board and ship list are empty
-        let mut rng = rand::rng();
-
-        for ship in FLEET {
-            let length = ship.length();
-
-            loop {
-                let direction = if rng.random_bool(0.5) {
-                    Direction::Horizontal
-                } else {
-                    Direction::Vertical
-                };
-
-                let (row, col) = match direction {
-                    Direction::Horizontal => (
-                        rng.random_range(0..BOARD_SIZE),
-                        rng.random_range(0..=BOARD_SIZE - length),
-                    ),
-                    Direction::Vertical => (
-                        rng.random_range(0..=BOARD_SIZE - length),
-                        rng.random_range(0..BOARD_SIZE),
-                    ),
-                };
-                let coord = Coord::new(row, col);
-
-                let positions = self.board.place_ship(coord, direction, ship)?;
-                self.ships.push(Ship::new(ship, positions));
-            }
-        }
-        Ok(())
-    }
-
     pub fn place_fleet(&mut self, placements: Vec<ShipPlacement>) -> Result<(), PlacementError> {
         if placements.len() != FLEET.len() {
             return Err(PlacementError::InvalidFleetSize);
         }
 
-        let mut temp_board = Board::new();
-        let mut temp_ships: Vec<Ship> = Vec::new();
-        let mut added_ships = std::collections::HashSet::new();
-
-        for placement in placements {
+        let mut added_ships = HashSet::new();
+        for placement in &placements {
             // Check for duplicate ship types
             if !added_ships.insert(placement.ship_type) {
                 return Err(PlacementError::ShipAlreadyPlaced);
             }
-
-            let positions: Vec<Coord> =
-                temp_board.place_ship(placement.start, placement.direction, placement.ship_type)?;
-            temp_ships.push(Ship::new(placement.ship_type, positions));
         }
 
-        self.board = temp_board;
-        self.ships = temp_ships;
+        let (board, ships) = Board::place_fleet(&placements)?;
+        self.board = board;
+        self.ships = ships;
 
         Ok(())
     }
@@ -128,7 +71,7 @@ impl Player {
         loop {
             let row = rng.random_range(0..BOARD_SIZE);
             let col = rng.random_range(0..BOARD_SIZE);
-            let coord = Coord { row, col };
+            let coord = Coord::new(row, col);
 
             match self.board.get_cell(coord) {
                 Cell::Hit(_) | Cell::Miss => continue,

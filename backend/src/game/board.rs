@@ -1,6 +1,6 @@
 use super::coord::Coord;
 use super::errors::PlacementError;
-use super::ship::{Direction, ShipType};
+use super::ship::{Direction, Ship, ShipPlacement, ShipType};
 
 pub const BOARD_SIZE: usize = 10;
 
@@ -27,41 +27,65 @@ impl Board {
         self.grid[coord.row()][coord.col()]
     }
 
-    pub fn place_ship(
-        &mut self,
+    pub fn ship_positions(
+        ship_type: ShipType,
         start: Coord,
         direction: Direction,
-        ship_type: ShipType,
     ) -> Result<Vec<Coord>, PlacementError> {
-        let mut positions: Vec<Coord> = Vec::new();
         let length = ship_type.length();
+        let mut positions = Vec::with_capacity(length);
 
         for i in 0..length {
-            // Calculate coordinate for each iteration
             let coord = match direction {
                 Direction::Horizontal => start.offset(0, i as isize),
                 Direction::Vertical => start.offset(i as isize, 0),
             }
-            .ok_or_else(|| PlacementError::ShipOutOfBounds)?;
+            .ok_or(PlacementError::ShipOutOfBounds)?;
 
-            // Bounds check
+            positions.push(coord);
+        }
+        Ok(positions)
+    }
+
+    pub fn validate_positions(&self, positions: &[Coord]) -> Result<(), PlacementError> {
+        for &coord in positions {
             if !within_bounds(coord) {
                 return Err(PlacementError::ShipOutOfBounds);
             }
 
-            // Overlap check
             if self.get_cell(coord) != Cell::Empty {
                 return Err(PlacementError::ShipOverlap);
             }
-
-            positions.push(coord);
         }
+        Ok(())
+    }
 
-        for coord in &positions {
+    pub fn place_ship(
+        &mut self,
+        ship_type: ShipType,
+        start: Coord,
+        direction: Direction,
+    ) -> Result<Vec<Coord>, PlacementError> {
+        let positions = Self::ship_positions(ship_type, start, direction)?;
+        self.validate_positions(&positions)?;
+        for &coord in &positions {
             self.grid[coord.row()][coord.col()] = Cell::Ship(ship_type);
         }
 
         Ok(positions)
+    }
+
+    pub fn place_fleet(placements: &[ShipPlacement]) -> Result<(Board, Vec<Ship>), PlacementError> {
+        // Returns a new board with ships placed if valid
+        let mut board = Board::new();
+        let mut ships = Vec::with_capacity(placements.len());
+
+        for placement in placements {
+            let positions =
+                board.place_ship(placement.ship_type, placement.start, placement.direction)?;
+            ships.push(Ship::new(placement.ship_type, positions));
+        }
+        Ok((board, ships))
     }
 
     pub fn fire_at(&mut self, coord: Coord) -> FireOutcome {

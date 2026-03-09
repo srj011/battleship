@@ -12,6 +12,12 @@ pub enum ShipType {
     PatrolBoat,
 }
 
+pub struct ShipPlacement {
+    pub ship_type: ShipType,
+    pub start: Coord,
+    pub direction: Direction,
+}
+
 impl ShipType {
     pub fn length(&self) -> usize {
         match self {
