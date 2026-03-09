@@ -35,7 +35,7 @@ impl GameState {
             player1,
             player2,
             current_turn: Turn::Player1,
-            status: GameStatus::Ongoing,
+            status: GameStatus::PlacingShips,
             player1_ready: false,
             player2_ready: false,
         }
@@ -62,6 +62,16 @@ impl GameState {
             Turn::Player1 => &mut self.player1,
             Turn::Player2 => &mut self.player2,
         };
+
+        match player {
+            Turn::Player1 if self.player1_ready => {
+                return Err(GameError::InvalidGameState);
+            }
+            Turn::Player2 if self.player2_ready => {
+                return Err(GameError::InvalidGameState);
+            }
+            _ => {}
+        }
 
         target.place_fleet(placements)?;
 
