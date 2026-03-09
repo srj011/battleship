@@ -101,34 +101,34 @@ impl AiPlayer {
         let first = self.current_hits[0];
         let second = self.current_hits[1];
 
-        if first.row == second.row {
+        if first.row() == second.row() {
             // Horizontal
-            let min_col = self.current_hits.iter().map(|c| c.col).min().unwrap();
-            let max_col = self.current_hits.iter().map(|c| c.col).max().unwrap();
+            let min_col = self.current_hits.iter().map(|c| c.col()).min().unwrap();
+            let max_col = self.current_hits.iter().map(|c| c.col()).max().unwrap();
 
-            if let Some(left) = Coord::new(first.row, min_col).offset(0, -1) {
+            if let Some(left) = Coord::new(first.row(), min_col).offset(0, -1) {
                 if self.is_valid_target(left) {
                     return Some(left);
                 }
             }
 
-            if let Some(right) = Coord::new(first.row, max_col).offset(0, 1) {
+            if let Some(right) = Coord::new(first.row(), max_col).offset(0, 1) {
                 if self.is_valid_target(right) {
                     return Some(right);
                 }
             }
         } else {
             // Vertical
-            let min_row = self.current_hits.iter().map(|c| c.row).min().unwrap();
-            let max_row = self.current_hits.iter().map(|c| c.row).max().unwrap();
+            let min_row = self.current_hits.iter().map(|c| c.row()).min().unwrap();
+            let max_row = self.current_hits.iter().map(|c| c.row()).max().unwrap();
 
-            if let Some(up) = Coord::new(min_row, first.col).offset(-1, 0) {
+            if let Some(up) = Coord::new(min_row, first.col()).offset(-1, 0) {
                 if self.is_valid_target(up) {
                     return Some(up);
                 }
             }
 
-            if let Some(down) = Coord::new(max_row, first.col).offset(1, 0) {
+            if let Some(down) = Coord::new(max_row, first.col()).offset(1, 0) {
                 if self.is_valid_target(down) {
                     return Some(down);
                 }
@@ -182,7 +182,7 @@ mod tests {
 
         for _ in 0..40 {
             let shot = ai.next_shot();
-            assert_eq!((shot.row + shot.col) % 2, 0);
+            assert_eq!((shot.row() + shot.col()) % 2, 0);
         }
     }
 }

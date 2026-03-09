@@ -8,9 +8,9 @@ use serde::Serialize;
 use crate::game::errors::GameError;
 
 pub enum ApiError {
-    Game(GameError),
     SessionNotFound,
     InvalidCoordinates,
+    Game(GameError),
 }
 
 impl From<GameError> for ApiError {
@@ -32,6 +32,12 @@ impl ApiError {
             ApiError::Game(GameError::NotPlayersTurn) => (StatusCode::BAD_REQUEST, "Not your turn"),
             ApiError::Game(GameError::GameAlreadyFinished) => {
                 (StatusCode::BAD_REQUEST, "Game already finished")
+            }
+            ApiError::Game(GameError::InvalidGameState) => {
+                (StatusCode::BAD_REQUEST, "Invalid game state")
+            }
+            ApiError::Game(GameError::Placement(_)) => {
+                (StatusCode::BAD_REQUEST, "Invalid ship placement")
             }
         }
     }

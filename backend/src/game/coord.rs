@@ -2,13 +2,21 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Coord {
-    pub row: usize,
-    pub col: usize,
+    row: usize,
+    col: usize,
 }
 
 impl Coord {
     pub fn new(row: usize, col: usize) -> Self {
         Self { row, col }
+    }
+
+    pub fn row(&self) -> usize {
+        self.row
+    }
+
+    pub fn col(&self) -> usize {
+        self.col
     }
 
     pub fn offset(self, dr: isize, dc: isize) -> Option<Self> {

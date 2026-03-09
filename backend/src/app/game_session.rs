@@ -5,6 +5,7 @@ use crate::game::coord::Coord;
 use crate::game::errors::GameError;
 use crate::game::game_state::{GameState, GameStatus, Turn};
 use crate::game::player::{Player, ShotResult};
+use crate::game::ship::ShipPlacement;
 
 #[derive(Clone, Copy, Serialize)]
 pub struct TurnEvent {
@@ -44,11 +45,8 @@ pub struct GameSession {
 
 impl GameSession {
     pub fn new_vs_ai() -> Self {
-        let mut player1 = Player::new();
-        let mut player2 = Player::new();
-
-        player1.place_random_ships();
-        player2.place_random_ships();
+        let player1 = Player::new();
+        let player2 = Player::new();
 
         let game = GameState::new(player1, player2);
         let ai = Some(AiPlayer::new());
@@ -90,6 +88,14 @@ impl GameSession {
             history: self.history.clone(),
             status: self.status(),
         }
+    }
+
+    pub fn place_fleet(
+        &mut self,
+        player: Turn,
+        placements: Vec<ShipPlacement>,
+    ) -> Result<(), GameError> {
+        self.game.place_fleet(player, placements)
     }
 
     pub fn player_fire(
