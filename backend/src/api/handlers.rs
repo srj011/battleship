@@ -8,13 +8,12 @@ use uuid::Uuid;
 
 use super::errors::ApiError;
 use super::types::*;
+use crate::app::game_session::{GameSnapshot, TurnOutcome};
 use crate::app::session_manager::SessionManager;
 use crate::game::board::within_bounds;
 use crate::game::coord::Coord;
-use crate::{
-    app::game_session::{GameSnapshot, TurnOutcome},
-    game::ship::ShipPlacement,
-};
+use crate::game::player::Player;
+use crate::game::ship::ShipPlacement;
 
 pub async fn health() -> Json<serde_json::Value> {
     Json(json!({ "status": "ok" }))
@@ -67,6 +66,15 @@ pub async fn place_fleet(
     session.place_fleet(request.player, placements)?;
 
     Ok(Json(session.snapshot()))
+}
+
+pub async fn random_fleet() -> Json<Vec<ApiShipPlacement>> {
+    Json(
+        Player::generate_random_fleet()
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+    )
 }
 
 pub async fn fire(

@@ -47,9 +47,14 @@ impl GameSession {
     pub fn new_vs_ai() -> Self {
         let player1 = Player::new();
         let player2 = Player::new();
+        let mut game = GameState::new(player1, player2);
 
-        let game = GameState::new(player1, player2);
         let ai = Some(AiPlayer::new());
+        // AI Fleet
+        let ai_fleet = Player::generate_random_fleet();
+        game.place_fleet(Turn::Player2, ai_fleet)
+            .expect("AI fleet placement failed");
+
         Self {
             game,
             ai,

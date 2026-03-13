@@ -24,7 +24,7 @@ pub struct CreateGameResponse {
     pub game_id: Uuid,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ApiShipPlacement {
     pub ship_type: ShipType,
     pub start: ApiCoord,
@@ -42,6 +42,16 @@ impl TryFrom<ApiShipPlacement> for ShipPlacement {
             start,
             direction: value.direction,
         })
+    }
+}
+
+impl From<ShipPlacement> for ApiShipPlacement {
+    fn from(value: ShipPlacement) -> Self {
+        Self {
+            ship_type: value.ship_type,
+            start: value.start.into(),
+            direction: value.direction,
+        }
     }
 }
 
@@ -78,5 +88,14 @@ impl TryFrom<ApiCoord> for Coord {
         }
 
         Ok(coord)
+    }
+}
+
+impl From<Coord> for ApiCoord {
+    fn from(coord: Coord) -> Self {
+        Self {
+            row: coord.row() as i32,
+            col: coord.col() as i32,
+        }
     }
 }

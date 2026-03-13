@@ -40,6 +40,46 @@ impl Player {
         Ok(())
     }
 
+    pub fn generate_random_fleet() -> Vec<ShipPlacement> {
+        let mut temp_board = Board::new();
+        let mut placements: Vec<ShipPlacement> = Vec::with_capacity(FLEET.len());
+        let mut rng = rand::rng();
+
+        for ship_type in FLEET {
+            let length = ship_type.length();
+            loop {
+                let direction = if rng.random_bool(0.5) {
+                    Direction::Horizontal
+                } else {
+                    Direction::Vertical
+                };
+
+                let (row, col) = match direction {
+                    Direction::Horizontal => (
+                        rng.random_range(0..BOARD_SIZE),
+                        rng.random_range(0..BOARD_SIZE - length + 1),
+                    ),
+                    Direction::Vertical => (
+                        rng.random_range(0..BOARD_SIZE - length + 1),
+                        rng.random_range(0..BOARD_SIZE),
+                    ),
+                };
+                let start = Coord::new(row, col);
+
+                if temp_board.place_ship(ship_type, start, direction).is_ok() {
+                    placements.push(ShipPlacement {
+                        ship_type,
+                        start,
+                        direction,
+                    });
+                    break;
+                }
+            }
+        }
+
+        placements
+    }
+
     pub fn get_ship_mut(&mut self, ship_type: ShipType) -> &mut Ship {
         self.ships
             .iter_mut()

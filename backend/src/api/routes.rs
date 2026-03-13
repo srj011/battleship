@@ -4,18 +4,22 @@ use axum::{
 };
 use std::sync::{Arc, Mutex};
 
-use super::handlers::{create_game, fire, get_game, health, place_fleet};
+use super::handlers::{create_game, fire, get_game, health, place_fleet, random_fleet};
 use crate::app::session_manager::SessionManager;
 
 pub fn create_router(manager: Arc<Mutex<SessionManager>>) -> Router {
+    let game_routes = Router::new()
+        .route("/", post(create_game))
+        .route("/{id}", get(get_game))
+        .route("/{id}/place-fleet", post(place_fleet))
+        .route("/{id}/fire", post(fire));
+
     let api_v1 = Router::new()
-        .route("/game", post(create_game))
-        .route("/game/{id}", get(get_game))
-        .route("/game/{id}/place-fleet", post(place_fleet))
-        .route("/game/{id}/fire", post(fire))
-        .with_state(manager.clone());
+        .nest("/game", game_routes)
+        .route("/random-fleet", get(random_fleet));
 
     Router::new()
         .route("/api/health", get(health))
         .nest("/api/v1", api_v1)
+        .with_state(manager)
 }
