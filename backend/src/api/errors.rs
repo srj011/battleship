@@ -11,6 +11,7 @@ pub enum ApiError {
     SessionNotFound,
     InvalidCoordinates,
     Game(GameError),
+    InvalidPlayer,
 }
 
 impl From<GameError> for ApiError {
@@ -29,6 +30,7 @@ impl ApiError {
         match self {
             ApiError::SessionNotFound => (StatusCode::NOT_FOUND, "Session not found"),
             ApiError::InvalidCoordinates => (StatusCode::BAD_REQUEST, "Invalid coordinate"),
+            ApiError::InvalidPlayer => (StatusCode::BAD_REQUEST, "Missing player parameter"),
             ApiError::Game(GameError::NotPlayersTurn) => (StatusCode::BAD_REQUEST, "Not your turn"),
             ApiError::Game(GameError::GameAlreadyFinished) => {
                 (StatusCode::BAD_REQUEST, "Game already finished")

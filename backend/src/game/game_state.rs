@@ -12,6 +12,15 @@ pub enum Turn {
     Player2,
 }
 
+impl Turn {
+    pub fn opponent(self) -> Self {
+        match self {
+            Turn::Player1 => Turn::Player2,
+            Turn::Player2 => Turn::Player1,
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum GameStatus {
@@ -47,6 +56,13 @@ impl GameState {
 
     pub fn current_turn(&self) -> Turn {
         self.current_turn
+    }
+
+    pub fn player(&self, player: Turn) -> &Player {
+        match player {
+            Turn::Player1 => &self.player1,
+            Turn::Player2 => &self.player2,
+        }
     }
 
     pub fn place_fleet(

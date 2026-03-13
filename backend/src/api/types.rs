@@ -24,6 +24,44 @@ pub struct CreateGameResponse {
     pub game_id: Uuid,
 }
 
+#[derive(Deserialize)]
+pub struct GetGameQuery {
+    pub player: Option<Turn>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct ApiCoord {
+    pub row: i32,
+    pub col: i32,
+}
+
+impl TryFrom<ApiCoord> for Coord {
+    type Error = ApiError;
+
+    fn try_from(value: ApiCoord) -> Result<Self, Self::Error> {
+        if value.row < 0 || value.col < 0 {
+            return Err(ApiError::InvalidCoordinates);
+        }
+
+        let coord = Coord::new(value.row as usize, value.col as usize);
+
+        if !within_bounds(coord) {
+            return Err(ApiError::InvalidCoordinates);
+        }
+
+        Ok(coord)
+    }
+}
+
+impl From<Coord> for ApiCoord {
+    fn from(coord: Coord) -> Self {
+        Self {
+            row: coord.row() as i32,
+            col: coord.col() as i32,
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct ApiShipPlacement {
     pub ship_type: ShipType,
@@ -65,37 +103,4 @@ pub struct PlaceFleetRequest {
 pub struct FireRequest {
     pub player: Turn,
     pub coord: ApiCoord,
-}
-
-#[derive(Deserialize)]
-pub struct ApiCoord {
-    pub row: i32,
-    pub col: i32,
-}
-
-impl TryFrom<ApiCoord> for Coord {
-    type Error = ApiError;
-
-    fn try_from(value: ApiCoord) -> Result<Self, Self::Error> {
-        if value.row < 0 || value.col < 0 {
-            return Err(ApiError::InvalidCoordinates);
-        }
-
-        let coord = Coord::new(value.row as usize, value.col as usize);
-
-        if !within_bounds(coord) {
-            return Err(ApiError::InvalidCoordinates);
-        }
-
-        Ok(coord)
-    }
-}
-
-impl From<Coord> for ApiCoord {
-    fn from(coord: Coord) -> Self {
-        Self {
-            row: coord.row() as i32,
-            col: coord.col() as i32,
-        }
-    }
 }

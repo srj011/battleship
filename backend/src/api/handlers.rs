@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
 };
 use serde_json::json;
 use std::sync::{Arc, Mutex};
@@ -36,6 +36,7 @@ pub async fn create_game(
 pub async fn get_game(
     Path(id): Path<Uuid>,
     State(manager): State<Arc<Mutex<SessionManager>>>,
+    Query(query): Query<GetGameQuery>,
 ) -> Result<Json<GameSnapshot>, ApiError> {
     let session = {
         let manager = manager.lock().unwrap();
@@ -43,7 +44,8 @@ pub async fn get_game(
     };
     let session = session.lock().unwrap();
 
-    Ok(Json(session.snapshot()))
+    let player = query.player.ok_or(ApiError::InvalidPlayer)?;
+    Ok(Json(session.snapshot_for(player)))
 }
 
 pub async fn place_fleet(
@@ -65,7 +67,7 @@ pub async fn place_fleet(
 
     session.place_fleet(request.player, placements)?;
 
-    Ok(Json(session.snapshot()))
+    Ok(Json(session.snapshot_for(request.player)))
 }
 
 pub async fn random_fleet() -> Json<Vec<ApiShipPlacement>> {

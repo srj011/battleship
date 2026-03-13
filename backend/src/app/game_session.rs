@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+use crate::app::board_view::{BoardPerspective, BoardView};
 use crate::game::ai::AiPlayer;
 use crate::game::coord::Coord;
 use crate::game::errors::GameError;
@@ -35,6 +36,8 @@ pub struct GameSnapshot {
     turn: Turn,
     history: Vec<TurnEvent>,
     status: GameStatus,
+    player_board: BoardView,
+    opponent_board: BoardView,
 }
 
 pub struct GameSession {
@@ -87,11 +90,15 @@ impl GameSession {
         &self.history
     }
 
-    pub fn snapshot(&self) -> GameSnapshot {
+    pub fn snapshot_for(&self, viewer: Turn) -> GameSnapshot {
+        let player = self.game.player(viewer);
+        let opponent = self.game.player(viewer.opponent());
         GameSnapshot {
             turn: self.current_turn(),
             history: self.history.clone(),
             status: self.status(),
+            player_board: BoardView::new(player.board(), BoardPerspective::Owner),
+            opponent_board: BoardView::new(opponent.board(), BoardPerspective::Opponent),
         }
     }
 

@@ -20,6 +20,10 @@ impl Player {
         }
     }
 
+    pub fn board(&self) -> &Board {
+        &self.board
+    }
+
     pub fn place_fleet(&mut self, placements: Vec<ShipPlacement>) -> Result<(), PlacementError> {
         if placements.len() != FLEET.len() {
             return Err(PlacementError::InvalidFleetSize);
