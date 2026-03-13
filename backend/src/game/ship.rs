@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::game::coord::Coord;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ShipType {
     Carrier,
@@ -51,6 +51,10 @@ impl Ship {
             positions,
             hits: 0,
         }
+    }
+
+    pub fn positions(&self) -> &Vec<Coord> {
+        &self.positions
     }
 
     pub fn ship_type(&self) -> ShipType {

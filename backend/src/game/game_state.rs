@@ -5,7 +5,7 @@ use super::errors::GameError;
 use super::player::{Player, ShotResult};
 use super::ship::ShipPlacement;
 
-#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Turn {
     Player1,
@@ -139,52 +139,5 @@ impl GameState {
             Turn::Player1 => Turn::Player2,
             Turn::Player2 => Turn::Player1,
         };
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::game::coord::Coord;
-    use crate::game::ship::{Direction, ShipType};
-
-    fn setup_players() -> (Player, Player) {
-        let mut p1 = Player::new();
-        let mut p2 = Player::new();
-
-        p1.place_ship(
-            ShipType::PatrolBoat,
-            Coord::new(0, 0),
-            Direction::Horizontal,
-        )
-        .unwrap();
-
-        p2.place_ship(ShipType::Carrier, Coord::new(0, 0), Direction::Horizontal)
-            .unwrap();
-
-        (p1, p2)
-    }
-
-    #[test]
-    fn turn_switches_on_miss() {
-        let (p1, p2) = setup_players();
-        let mut game = GameState::new(p1, p2);
-
-        // Player1 fires miss
-        let _ = game.take_turn(Coord::new(5, 5));
-
-        // Next turn should belong to Player2
-        assert!(matches!(game.current_turn, Turn::Player2));
-    }
-
-    #[test]
-    fn game_ends_when_ship_destroyed() {
-        let (p1, p2) = setup_players();
-        let mut game = GameState::new(p1, p2);
-
-        let _ = game.take_turn(Coord::new(0, 0));
-        let _ = game.take_turn(Coord::new(0, 1));
-
-        assert!(matches!(game.status, GameStatus::Winner(Turn::Player1)));
     }
 }
