@@ -122,14 +122,11 @@ impl GameSession {
         acting_player: Turn,
         coord: Coord,
     ) -> Result<TurnOutcome, GameError> {
-        if acting_player != self.game.current_turn() {
-            return Err(GameError::NotPlayersTurn);
-        }
-
         let mut events = Vec::new();
 
         // Player turn
-        self.record_turn(&mut events, acting_player, coord)?;
+        let update = self.fire_once(acting_player, coord)?;
+        events.push(update.event);
 
         // AI turn
         if let Some(mut ai) = self.ai.take() {
@@ -137,7 +134,9 @@ impl GameSession {
                 && self.game.current_turn() == Turn::Player2
             {
                 let ai_coord = ai.next_shot();
-                let ai_event = self.record_turn(&mut events, Turn::Player2, ai_coord)?;
+                let update = self.fire_once(Turn::Player2, ai_coord)?;
+                let ai_event = update.event;
+                events.push(ai_event);
 
                 if ai_event.result == ShotResult::AlreadyShot {
                     panic!("AI fired at an already-shot cell {ai_coord:?}");
