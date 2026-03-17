@@ -36,15 +36,15 @@ pub struct GameSnapshot {
     turn: Turn,
     history: Vec<TurnEvent>,
     status: GameStatus,
-    player_board: BoardView,
-    opponent_board: BoardView,
+    pub player_board: BoardView,
+    pub opponent_board: BoardView,
 }
 
-#[derive(Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct GameUpdate {
-    event: TurnEvent,
-    turn: Turn,
-    status: GameStatus,
+    pub event: TurnEvent,
+    pub turn: Turn,
+    pub status: GameStatus,
 }
 
 pub struct GameSession {
