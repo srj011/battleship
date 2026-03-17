@@ -40,6 +40,13 @@ pub struct GameSnapshot {
     opponent_board: BoardView,
 }
 
+#[derive(Clone, Copy, Serialize)]
+pub struct GameUpdate {
+    event: TurnEvent,
+    turn: Turn,
+    status: GameStatus,
+}
+
 pub struct GameSession {
     game: GameState,
     ai: Option<AiPlayer>,
@@ -148,6 +155,25 @@ impl GameSession {
 
         Ok(TurnOutcome {
             events,
+            status: self.game.status(),
+        })
+    }
+
+    pub fn fire_once(
+        &mut self,
+        acting_player: Turn,
+        coord: Coord,
+    ) -> Result<GameUpdate, GameError> {
+        if acting_player != self.game.current_turn() {
+            return Err(GameError::NotPlayersTurn);
+        }
+
+        let mut events = Vec::with_capacity(1);
+        let event = self.record_turn(&mut events, acting_player, coord)?;
+
+        Ok(GameUpdate {
+            event,
+            turn: self.game.current_turn(),
             status: self.game.status(),
         })
     }
