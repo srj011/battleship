@@ -1,16 +1,22 @@
 use axum::{
     extract::{
         Path, State,
-        ws::{self, WebSocket, WebSocketUpgrade},
+        ws::{self, Message, WebSocket, WebSocketUpgrade},
     },
     response::IntoResponse,
 };
-use futures::{SinkExt, StreamExt};
+use futures::{SinkExt, StreamExt, stream::SplitSink};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
-use crate::api::ws::messages::ClientMessage;
+use crate::api::errors::ApiError;
+use crate::api::types::ApiCoord;
+use crate::api::ws::messages::{ClientMessage, ServerMessage};
+use crate::app::game_session::GameSession;
 use crate::app::session_manager::SessionManager;
+use crate::game::coord::Coord;
+use crate::game::errors::GameError;
+use crate::game::game_state::Turn;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -29,25 +35,52 @@ async fn handle_socket(socket: WebSocket, game_id: Uuid, manager: Arc<Mutex<Sess
             Ok(ws::Message::Text(text)) => match serde_json::from_str::<ClientMessage>(&text) {
                 Ok(client_msg) => match client_msg {
                     ClientMessage::Fire { coord } => {
-                        println!("Fire request received: {coord:?}");
+                        eprintln!("[WS] Fire request: {coord:?}");
+
+                        let session_opt = {
+                            let manager = manager.lock().unwrap();
+                            manager.get_session(&game_id)
+                        };
 
                         let session = {
-                            let manager = manager.lock().unwrap();
-                            manager.get_session(&game_id).unwrap().clone()
+                            match session_opt {
+                                Some(s) => s,
+                                None => {
+                                    eprintln!("[WS] Error: Session Not Found");
+
+                                    let error_msg = ServerMessage::Error {
+                                        message: "Session not found".into(),
+                                    };
+
+                                    let _ = sender
+                                        .send(Message::Text(
+                                            serde_json::to_string(&error_msg).unwrap().into(),
+                                        ))
+                                        .await;
+                                    return;
+                                }
+                            }
                         };
 
-                        let result = {
-                            let mut session = session.lock().unwrap();
-                            session.player_fire(
-                                crate::game::game_state::Turn::Player1,
-                                coord.try_into().unwrap(),
-                            )
-                        };
+                        if let Err(e) = handle_fire(&mut sender, session, coord).await {
+                            eprintln!("[WS] error: {e:?}");
 
-                        println!("Fire result: {result:?}");
+                            let message = match e {
+                                ApiError::Game(GameError::NotPlayersTurn) => "Not your turn",
+                                ApiError::InvalidCoordinates => "Invalid coordinate",
+                                _ => "Internal error",
+                            };
 
-                        let reply = ws::Message::Text("ack".into());
-                        sender.send(reply).await.unwrap();
+                            let error_msg = ServerMessage::Error {
+                                message: message.to_string(),
+                            };
+
+                            let _ = sender
+                                .send(Message::Text(
+                                    serde_json::to_string(&error_msg).unwrap().into(),
+                                ))
+                                .await;
+                        }
                     }
                 },
                 Err(err) => println!("Invalid message: {err}"),
@@ -60,4 +93,32 @@ async fn handle_socket(socket: WebSocket, game_id: Uuid, manager: Arc<Mutex<Sess
         }
     }
     println!("Websocket disconnected");
+}
+
+async fn handle_fire(
+    sender: &mut SplitSink<WebSocket, Message>,
+    session: Arc<Mutex<GameSession>>,
+    coord: ApiCoord,
+) -> Result<(), ApiError> {
+    let coord: Coord = coord.try_into()?;
+
+    let message = {
+        let mut session = session.lock().unwrap();
+        let update = session.fire_once(Turn::Player1, coord)?;
+
+        let snapshot = session.snapshot_for(Turn::Player1);
+        ServerMessage::GameUpdate {
+            event: update.event,
+            turn: update.turn,
+            status: update.status,
+            player_board: snapshot.player_board,
+            opponent_board: snapshot.opponent_board,
+        }
+    };
+
+    sender
+        .send(Message::Text(serde_json::to_string(&message)?.into()))
+        .await?;
+
+    Ok(())
 }
