@@ -8,7 +8,7 @@ use crate::game::game_state::{GameState, GameStatus, Turn};
 use crate::game::player::{Player, ShotResult};
 use crate::game::ship::ShipPlacement;
 
-#[derive(Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct TurnEvent {
     player: Turn,
     coord: Coord,
@@ -25,7 +25,7 @@ impl TurnEvent {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct TurnOutcome {
     events: Vec<TurnEvent>,
     status: GameStatus,

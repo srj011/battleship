@@ -4,7 +4,7 @@ use crate::game::board::{BOARD_SIZE, Board, Cell};
 use crate::game::coord::Coord;
 use crate::game::ship::ShipType;
 
-#[derive(Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub enum CellView {
     Unknown,
     Empty,
@@ -18,7 +18,7 @@ pub enum BoardPerspective {
     Opponent,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct BoardView {
     pub cells: [[CellView; BOARD_SIZE]; BOARD_SIZE],
 }

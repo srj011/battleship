@@ -7,6 +7,7 @@ use serde::Serialize;
 
 use crate::game::errors::GameError;
 
+#[derive(Debug)]
 pub enum ApiError {
     SessionNotFound,
     InvalidCoordinates,

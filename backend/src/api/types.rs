@@ -29,7 +29,7 @@ pub struct GetGameQuery {
     pub player: Option<Turn>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ApiCoord {
     pub row: i32,
     pub col: i32,

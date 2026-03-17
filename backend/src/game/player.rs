@@ -129,7 +129,7 @@ impl Player {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ShotResult {
     Hit,
