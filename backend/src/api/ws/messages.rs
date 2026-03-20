@@ -14,6 +14,12 @@ pub enum ClientMessage {
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ServerMessage {
+    GameState {
+        turn: Turn,
+        status: GameStatus,
+        player_board: BoardView,
+        opponent_board: BoardView,
+    },
     GameUpdate {
         event: TurnEvent,
         turn: Turn,

@@ -33,8 +33,6 @@ async fn handle_socket(
     player: Turn,
     manager: Arc<Mutex<SessionManager>>,
 ) {
-    eprintln!("[WS] Connected: {game_id} as {player:?}");
-
     let (mut sender, mut receiver) = socket.split();
 
     // Get Session
@@ -68,6 +66,29 @@ async fn handle_socket(
             return;
         }
     };
+
+    eprintln!("[WS] Connected: {game_id} as {player:?}");
+
+    // Inital message
+    let initial_message = {
+        let session_guard = session.lock().unwrap();
+        let snapshot = session_guard.snapshot_for(player);
+
+        ServerMessage::GameState {
+            turn: session_guard.current_turn(),
+            status: session_guard.status(),
+            player_board: snapshot.player_board,
+            opponent_board: snapshot.opponent_board,
+        }
+    };
+
+    let _ = sender
+        .send(Message::Text(
+            serde_json::to_string(&initial_message)
+                .unwrap_or_else(|_| "{\"type\":\"error\", \"message\":\"internal\"}".into())
+                .into(),
+        ))
+        .await;
 
     // Event loop
     loop {
