@@ -132,6 +132,7 @@ impl GameSession {
         acting_player: Turn,
         coord: Coord,
     ) -> Result<TurnOutcome, GameError> {
+        // REST API helper method
         let mut events = Vec::new();
 
         // Player turn
@@ -139,28 +140,7 @@ impl GameSession {
         events.push(update.event);
 
         // AI turn
-        if let Some(mut ai) = self.ai.take() {
-            while self.game.status() == GameStatus::Ongoing
-                && self.game.current_turn() == Turn::Player2
-            {
-                let ai_coord = ai.next_shot();
-                let update = self.fire_once(Turn::Player2, ai_coord)?;
-                let ai_event = update.event;
-                events.push(ai_event);
-
-                if ai_event.result == ShotResult::AlreadyShot {
-                    panic!("AI fired at an already-shot cell {ai_coord:?}");
-                }
-
-                ai.process_result(ai_coord, ai_event.result);
-
-                if ai_event.result == ShotResult::Miss {
-                    break;
-                }
-            }
-
-            self.ai = Some(ai);
-        }
+        self.ai_turn()?;
 
         Ok(TurnOutcome {
             events,
@@ -180,11 +160,40 @@ impl GameSession {
         let mut events = Vec::with_capacity(1);
         let event = self.record_turn(&mut events, acting_player, coord)?;
 
-        Ok(GameUpdate {
+        let update = GameUpdate {
             event,
             turn: self.game.current_turn(),
             status: self.game.status(),
-        })
+        };
+
+        let _ = self.tx.send(update);
+        Ok(update)
+    }
+
+    pub fn ai_turn(&mut self) -> Result<(), GameError> {
+        let Some(mut ai) = self.ai.take() else {
+            return Ok(());
+        };
+
+        while self.game.status() == GameStatus::Ongoing && self.game.current_turn() == Turn::Player2
+        {
+            let coord = ai.next_shot();
+            let update = self.fire_once(Turn::Player2, coord)?;
+            let event = update.event;
+
+            if event.result == ShotResult::AlreadyShot {
+                panic!("AI fired at an already-shot cell {coord:?}");
+            }
+
+            ai.process_result(coord, event.result);
+
+            if event.result == ShotResult::Miss {
+                break;
+            }
+        }
+        self.ai = Some(ai);
+
+        Ok(())
     }
 
     fn record_turn(
