@@ -21,14 +21,19 @@ use crate::game::game_state::Turn;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
-    Path(id): Path<Uuid>,
+    Path((id, player)): Path<(Uuid, Turn)>,
     State(manager): State<Arc<Mutex<SessionManager>>>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, id, manager))
+    ws.on_upgrade(move |socket| handle_socket(socket, id, player, manager))
 }
 
-async fn handle_socket(socket: WebSocket, game_id: Uuid, manager: Arc<Mutex<SessionManager>>) {
-    eprintln!("[WS] Connected: {game_id}");
+async fn handle_socket(
+    socket: WebSocket,
+    game_id: Uuid,
+    player: Turn,
+    manager: Arc<Mutex<SessionManager>>,
+) {
+    eprintln!("[WS] Connected: {game_id} as {player:?}");
 
     let (mut sender, mut receiver) = socket.split();
 
@@ -72,7 +77,7 @@ async fn handle_socket(socket: WebSocket, game_id: Uuid, manager: Arc<Mutex<Sess
                     Some(Ok(Message::Text(text))) => {
                         match serde_json::from_str::<ClientMessage>(&text) {
                             Ok(ClientMessage::Fire { coord }) => {
-                                if let Err(e) = handle_fire(session.clone(), coord).await {
+                                if let Err(e) = handle_fire(session.clone(), player, coord).await {
                                     eprintln!("[WS] error: {e:?}");
                                     let error_msg = error_to_ws_message(e);
                                     let _ = sender.send(error_msg).await;
@@ -99,7 +104,7 @@ async fn handle_socket(socket: WebSocket, game_id: Uuid, manager: Arc<Mutex<Sess
                     Ok(update) => {
                         let message = {
                             let session_guard = session.lock().unwrap();
-                            let snapshot = session_guard.snapshot_for(Turn::Player1);
+                            let snapshot = session_guard.snapshot_for(player);
 
                             ServerMessage::GameUpdate {
                                 event: update.event,
@@ -123,14 +128,18 @@ async fn handle_socket(socket: WebSocket, game_id: Uuid, manager: Arc<Mutex<Sess
             }
         }
     }
-    eprintln!("[WS] Disconnected: {game_id}");
+    eprintln!("[WS] Disconnected: {game_id} for {player:?}");
 }
 
-async fn handle_fire(session: Arc<Mutex<GameSession>>, coord: ApiCoord) -> Result<(), ApiError> {
+async fn handle_fire(
+    session: Arc<Mutex<GameSession>>,
+    player: Turn,
+    coord: ApiCoord,
+) -> Result<(), ApiError> {
     let coord: Coord = coord.try_into()?;
 
     let mut session_guard = session.lock().unwrap();
-    session_guard.fire_once(Turn::Player1, coord)?;
+    session_guard.fire_once(player, coord)?;
 
     Ok(())
 }
