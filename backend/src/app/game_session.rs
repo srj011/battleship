@@ -1,4 +1,5 @@
 use serde::Serialize;
+use tokio::sync::broadcast;
 
 use crate::app::board_view::{BoardPerspective, BoardView};
 use crate::game::ai::AiPlayer;
@@ -51,12 +52,14 @@ pub struct GameSession {
     game: GameState,
     ai: Option<AiPlayer>,
     history: Vec<TurnEvent>,
+    tx: broadcast::Sender<GameUpdate>,
 }
 
 impl GameSession {
     pub fn new_vs_ai() -> Self {
         let player1 = Player::new();
         let player2 = Player::new();
+        let (tx, _) = broadcast::channel(32);
         let mut game = GameState::new(player1, player2);
 
         let ai = Some(AiPlayer::new());
@@ -69,12 +72,14 @@ impl GameSession {
             game,
             ai,
             history: Vec::new(),
+            tx,
         }
     }
 
     pub fn new_vs_multiplayer() -> Self {
         let player1 = Player::new();
         let player2 = Player::new();
+        let (tx, _) = broadcast::channel(32);
 
         let game = GameState::new(player1, player2);
 
@@ -82,6 +87,7 @@ impl GameSession {
             game,
             ai: None,
             history: Vec::new(),
+            tx,
         }
     }
 
@@ -95,6 +101,10 @@ impl GameSession {
 
     pub fn events(&self) -> &[TurnEvent] {
         &self.history
+    }
+
+    pub fn subscribe(&self) -> broadcast::Receiver<GameUpdate> {
+        self.tx.subscribe()
     }
 
     pub fn snapshot_for(&self, viewer: Turn) -> GameSnapshot {
