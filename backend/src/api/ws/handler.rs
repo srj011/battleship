@@ -19,6 +19,7 @@ use crate::game::coord::Coord;
 use crate::game::errors::GameError;
 use crate::game::game_state::Turn;
 use crate::game::player::Player;
+use crate::game::ship::ShipPlacement;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -108,8 +109,24 @@ async fn handle_socket(
                             },
 
                             Ok(ClientMessage::RandomFleet) => {
+                                eprintln!("[WS] Random Fleet requested");
                                 let message = handle_random_fleet().await;
-                                let _ = sender.send(to_ws_message(message));
+                                let _ = sender.send(to_ws_message(message)).await;
+                            },
+
+                            Ok(ClientMessage::PlaceFleet { fleet }) => {
+                                eprintln!("[WS] Fleet placement requested");
+                                match handle_place_fleet(session.clone(), player, fleet).await {
+                                    Ok(message) => {
+                                        let _ = sender.send(to_ws_message(message)).await;
+                                    },
+                                    Err(e) => {
+                                        eprintln!("[WS] Placement error: {e:?}");
+                                        let server_msg = map_error_to_message(e);
+                                        let error_msg = to_ws_message(server_msg);
+                                        let _ = sender.send(error_msg).await;
+                                    }
+                                }
                             },
 
                             Err(err) => {
@@ -164,7 +181,30 @@ async fn handle_random_fleet() -> ServerMessage {
     let fleet = Player::generate_random_fleet();
     let api_fleet: Vec<ApiShipPlacement> = fleet.into_iter().map(Into::into).collect();
 
+    eprintln!("[WS] Random fleet generated");
     ServerMessage::RandomFleet { fleet: api_fleet }
+}
+
+async fn handle_place_fleet(
+    session: Arc<Mutex<GameSession>>,
+    player: Turn,
+    fleet: Vec<ApiShipPlacement>,
+) -> Result<ServerMessage, ApiError> {
+    let placements: Vec<ShipPlacement> = fleet
+        .into_iter()
+        .map(TryInto::try_into)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let mut session_guard = session.lock().unwrap();
+    session_guard.place_fleet(player, placements)?;
+    let snapshot = session_guard.snapshot_for(player);
+
+    Ok(ServerMessage::GameState {
+        turn: session_guard.current_turn(),
+        status: session_guard.status(),
+        player_board: snapshot.player_board,
+        opponent_board: snapshot.opponent_board,
+    })
 }
 
 async fn handle_fire(

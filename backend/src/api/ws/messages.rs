@@ -10,6 +10,7 @@ use crate::game::game_state::{GameStatus, Turn};
 pub enum ClientMessage {
     Fire { coord: ApiCoord },
     RandomFleet,
+    PlaceFleet { fleet: Vec<ApiShipPlacement> },
 }
 
 #[derive(Debug, Serialize)]
