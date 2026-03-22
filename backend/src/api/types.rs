@@ -62,7 +62,7 @@ impl From<Coord> for ApiCoord {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ApiShipPlacement {
     pub ship_type: ShipType,
     pub start: ApiCoord,

@@ -11,13 +11,14 @@ use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::api::errors::ApiError;
-use crate::api::types::ApiCoord;
+use crate::api::types::{ApiCoord, ApiShipPlacement};
 use crate::api::ws::messages::{ClientMessage, ServerMessage};
 use crate::app::game_session::GameSession;
 use crate::app::session_manager::SessionManager;
 use crate::game::coord::Coord;
 use crate::game::errors::GameError;
 use crate::game::game_state::Turn;
+use crate::game::player::Player;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -100,10 +101,17 @@ async fn handle_socket(
                             Ok(ClientMessage::Fire { coord }) => {
                                 if let Err(e) = handle_fire(session.clone(), player, coord).await {
                                     eprintln!("[WS] error: {e:?}");
-                                    let error_msg = error_to_ws_message(e);
+                                    let server_msg = map_error_to_message(e);
+                                    let error_msg = to_ws_message(server_msg);
                                     let _ = sender.send(error_msg).await;
                                 }
                             },
+
+                            Ok(ClientMessage::RandomFleet) => {
+                                let message = handle_random_fleet().await;
+                                let _ = sender.send(to_ws_message(message));
+                            },
+
                             Err(err) => {
                                 eprintln!("Invalid message: {err}");
                             }
@@ -152,6 +160,13 @@ async fn handle_socket(
     eprintln!("[WS] Disconnected: {game_id} for {player:?}");
 }
 
+async fn handle_random_fleet() -> ServerMessage {
+    let fleet = Player::generate_random_fleet();
+    let api_fleet: Vec<ApiShipPlacement> = fleet.into_iter().map(Into::into).collect();
+
+    ServerMessage::RandomFleet { fleet: api_fleet }
+}
+
 async fn handle_fire(
     session: Arc<Mutex<GameSession>>,
     player: Turn,
@@ -177,11 +192,9 @@ fn map_error_to_message(e: ApiError) -> ServerMessage {
     }
 }
 
-fn error_to_ws_message(e: ApiError) -> Message {
-    let server_msg = map_error_to_message(e);
-
+fn to_ws_message(message: ServerMessage) -> Message {
     Message::Text(
-        serde_json::to_string(&server_msg)
+        serde_json::to_string(&message)
             .unwrap_or_else(|_| "{\"type\":\"error\", \"message\":\"internal\"}".into())
             .into(),
     )
