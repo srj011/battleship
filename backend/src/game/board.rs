@@ -49,12 +49,31 @@ impl Board {
 
     pub fn validate_positions(&self, positions: &[Coord]) -> Result<(), PlacementError> {
         for &coord in positions {
+            // Bounds check
             if !within_bounds(coord) {
                 return Err(PlacementError::ShipOutOfBounds);
             }
 
+            // Overlap check
             if self.get_cell(coord) != Cell::Empty {
                 return Err(PlacementError::ShipOverlap);
+            }
+
+            // Adjacency check
+            for dr in -1..=1 {
+                for dc in -1..=1 {
+                    if dr == 0 && dc == 0 {
+                        continue;
+                    }
+
+                    if let Some(adj_cell) = coord.offset(dr, dc) {
+                        if within_bounds(adj_cell) {
+                            if let Cell::Ship(_) = self.get_cell(adj_cell) {
+                                return Err(PlacementError::ShipOverlap);
+                            }
+                        }
+                    }
+                }
             }
         }
         Ok(())
