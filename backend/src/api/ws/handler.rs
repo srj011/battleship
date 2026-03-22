@@ -161,6 +161,7 @@ async fn handle_fire(
 
     let mut session_guard = session.lock().unwrap();
     session_guard.fire_once(player, coord)?;
+    session_guard.ai_turn()?;
 
     Ok(())
 }
