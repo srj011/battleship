@@ -160,8 +160,7 @@ async fn handle_fire(
     let coord: Coord = coord.try_into()?;
 
     let mut session_guard = session.lock().unwrap();
-    session_guard.fire_once(player, coord)?;
-    session_guard.ai_turn()?;
+    session_guard.player_fire(player, coord)?;
 
     Ok(())
 }
