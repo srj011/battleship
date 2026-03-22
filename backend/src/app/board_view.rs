@@ -5,6 +5,7 @@ use crate::game::coord::Coord;
 use crate::game::ship::ShipType;
 
 #[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum CellView {
     Unknown,
     Empty,
