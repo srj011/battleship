@@ -4,7 +4,6 @@ use uuid::Uuid;
 use crate::api::errors::ApiError;
 use crate::game::board::within_bounds;
 use crate::game::coord::Coord;
-use crate::game::game_state::Turn;
 use crate::game::ship::{Direction, ShipPlacement, ShipType};
 
 #[derive(Deserialize)]
@@ -32,12 +31,12 @@ pub struct JoinGameResponse {
 
 #[derive(Deserialize)]
 pub struct GetGameQuery {
-    pub player: Option<Turn>,
+    pub player_token: Uuid,
 }
 
 #[derive(Deserialize)]
 pub struct WsQuery {
-    pub token: Uuid,
+    pub player_token: Uuid,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -106,12 +105,12 @@ impl From<ShipPlacement> for ApiShipPlacement {
 
 #[derive(Deserialize)]
 pub struct PlaceFleetRequest {
-    pub player: Turn,
+    pub player_token: Uuid,
     pub fleet: Vec<ApiShipPlacement>,
 }
 
 #[derive(Deserialize)]
 pub struct FireRequest {
-    pub player: Turn,
+    pub player_token: Uuid,
     pub coord: ApiCoord,
 }

@@ -35,7 +35,7 @@ pub async fn ws_handler(
     let player = {
         let session = session_arc.lock().unwrap();
         session
-            .player_from_token(query.token)
+            .player_from_token(query.player_token)
             .ok_or(ApiError::InvalidPlayer)?
     };
 
