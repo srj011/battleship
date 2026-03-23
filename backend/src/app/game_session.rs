@@ -128,6 +128,17 @@ impl GameSession {
         self.player2_token
     }
 
+    pub fn join_player(&mut self) -> Result<Uuid, GameError> {
+        if self.player2_token().is_some() {
+            return Err(GameError::GameFull);
+        }
+
+        let player_token = Uuid::new_v4();
+        self.player2_token = Some(player_token);
+
+        Ok(player_token)
+    }
+
     pub fn player_from_token(&self, token: Uuid) -> Option<Turn> {
         if token == self.player1_token {
             Some(Turn::Player1)

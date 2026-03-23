@@ -25,6 +25,11 @@ pub struct CreateGameResponse {
     pub player_token: Uuid,
 }
 
+#[derive(Serialize)]
+pub struct JoinGameResponse {
+    pub player_token: Uuid,
+}
+
 #[derive(Deserialize)]
 pub struct GetGameQuery {
     pub player: Option<Turn>,

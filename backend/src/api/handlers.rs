@@ -36,6 +36,22 @@ pub async fn create_game(
     })
 }
 
+pub async fn join_game(
+    Path(id): Path<Uuid>,
+    State(manager): State<Arc<Mutex<SessionManager>>>,
+) -> Result<Json<JoinGameResponse>, ApiError> {
+    let session = {
+        let manager = manager.lock().unwrap();
+        manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
+    };
+
+    let mut session_guard = session.lock().unwrap();
+
+    let player_token = session_guard.join_player()?;
+
+    Ok(Json(JoinGameResponse { player_token }))
+}
+
 pub async fn get_game(
     Path(id): Path<Uuid>,
     State(manager): State<Arc<Mutex<SessionManager>>>,

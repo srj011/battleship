@@ -11,9 +11,9 @@ use crate::game::errors::GameError;
 pub enum ApiError {
     SessionNotFound,
     InvalidCoordinates,
-    Game(GameError),
     InvalidPlayer,
     Internal,
+    Game(GameError),
 }
 
 impl From<GameError> for ApiError {
@@ -52,6 +52,7 @@ impl ApiError {
             ApiError::Game(GameError::InvalidGameState) => {
                 (StatusCode::BAD_REQUEST, "Invalid game state")
             }
+            ApiError::Game(GameError::GameFull) => (StatusCode::CONFLICT, "Game already full"),
             ApiError::Game(GameError::Placement(_)) => {
                 (StatusCode::BAD_REQUEST, "Invalid ship placement")
             }
