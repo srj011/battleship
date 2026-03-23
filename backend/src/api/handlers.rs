@@ -25,12 +25,15 @@ pub async fn create_game(
 ) -> Json<CreateGameResponse> {
     let mut manager = manager.lock().unwrap();
 
-    let game_id = match request.mode {
+    let (game_id, player_token) = match request.mode {
         GameMode::Ai => manager.create_vs_ai(),
         GameMode::Multiplayer => manager.create_multiplayer(),
     };
 
-    Json(CreateGameResponse { game_id })
+    Json(CreateGameResponse {
+        game_id,
+        player_token,
+    })
 }
 
 pub async fn get_game(
