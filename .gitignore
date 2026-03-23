@@ -26,32 +26,37 @@ Thumbs.db
 # Cargo build output
 /backend/target/
 
-# Rust generated lockfile (KEEP this for apps!)
-# Comment this out if you ever turn backend into a library
-# (You likely want to keep Cargo.lock committed)
+# Keep Cargo.lock (app, not lib)
 # /backend/Cargo.lock
 
 # Rust incremental compilation
 **/*.rs.bk
 
 ##################################################
-# Frontend (Bun + Vite + React)
+# Frontend (SvelteKit + Bun)
 ##################################################
 
 # Dependencies
 /frontend/node_modules/
 
-# Production build
+# SvelteKit build output
+/frontend/.svelte-kit/
+
+# Production build output (adapter dependent)
+/frontend/build/
 /frontend/dist/
 
-# Vite cache
+# Vite cache (still used internally)
 /frontend/.vite/
-/frontend/.cache/
 
-# TypeScript build info
+# Environment files (optional, if frontend uses them)
+/frontend/.env
+/frontend/.env.*
+
+# TypeScript
 /frontend/*.tsbuildinfo
 
-# Coverage
+# Testing
 /frontend/coverage/
 
 ##################################################
@@ -72,7 +77,7 @@ Thumbs.db
 *.swo
 
 ##################################################
-# Testing
+# Testing (global)
 ##################################################
 
 coverage/
