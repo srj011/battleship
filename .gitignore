@@ -36,28 +36,7 @@ Thumbs.db
 # Frontend (SvelteKit + Bun)
 ##################################################
 
-# Dependencies
-/frontend/node_modules/
-
-# SvelteKit build output
-/frontend/.svelte-kit/
-
-# Production build output (adapter dependent)
-/frontend/build/
-/frontend/dist/
-
-# Vite cache (still used internally)
-/frontend/.vite/
-
-# Environment files (optional, if frontend uses them)
-/frontend/.env
-/frontend/.env.*
-
-# TypeScript
-/frontend/*.tsbuildinfo
-
-# Testing
-/frontend/coverage/
+# Handled by frontend/.gitignore
 
 ##################################################
 # IDE / Editor
