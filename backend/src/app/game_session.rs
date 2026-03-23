@@ -1,4 +1,5 @@
 use serde::Serialize;
+use tokio::sync::broadcast;
 
 use crate::app::board_view::{BoardPerspective, BoardView};
 use crate::game::ai::AiPlayer;
@@ -8,7 +9,7 @@ use crate::game::game_state::{GameState, GameStatus, Turn};
 use crate::game::player::{Player, ShotResult};
 use crate::game::ship::ShipPlacement;
 
-#[derive(Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub struct TurnEvent {
     player: Turn,
     coord: Coord,
@@ -25,7 +26,7 @@ impl TurnEvent {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct TurnOutcome {
     events: Vec<TurnEvent>,
     status: GameStatus,
@@ -36,20 +37,29 @@ pub struct GameSnapshot {
     turn: Turn,
     history: Vec<TurnEvent>,
     status: GameStatus,
-    player_board: BoardView,
-    opponent_board: BoardView,
+    pub player_board: BoardView,
+    pub opponent_board: BoardView,
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct GameUpdate {
+    pub event: TurnEvent,
+    pub turn: Turn,
+    pub status: GameStatus,
 }
 
 pub struct GameSession {
     game: GameState,
     ai: Option<AiPlayer>,
     history: Vec<TurnEvent>,
+    tx: broadcast::Sender<GameUpdate>,
 }
 
 impl GameSession {
     pub fn new_vs_ai() -> Self {
         let player1 = Player::new();
         let player2 = Player::new();
+        let (tx, _) = broadcast::channel(32);
         let mut game = GameState::new(player1, player2);
 
         let ai = Some(AiPlayer::new());
@@ -62,12 +72,14 @@ impl GameSession {
             game,
             ai,
             history: Vec::new(),
+            tx,
         }
     }
 
     pub fn new_vs_multiplayer() -> Self {
         let player1 = Player::new();
         let player2 = Player::new();
+        let (tx, _) = broadcast::channel(32);
 
         let game = GameState::new(player1, player2);
 
@@ -75,6 +87,7 @@ impl GameSession {
             game,
             ai: None,
             history: Vec::new(),
+            tx,
         }
     }
 
@@ -88,6 +101,10 @@ impl GameSession {
 
     pub fn events(&self) -> &[TurnEvent] {
         &self.history
+    }
+
+    pub fn subscribe(&self) -> broadcast::Receiver<GameUpdate> {
+        self.tx.subscribe()
     }
 
     pub fn snapshot_for(&self, viewer: Turn) -> GameSnapshot {
@@ -115,41 +132,68 @@ impl GameSession {
         acting_player: Turn,
         coord: Coord,
     ) -> Result<TurnOutcome, GameError> {
-        if acting_player != self.game.current_turn() {
-            return Err(GameError::NotPlayersTurn);
-        }
-
+        // REST API helper method
         let mut events = Vec::new();
 
         // Player turn
-        self.record_turn(&mut events, acting_player, coord)?;
+        let update = self.fire_once(acting_player, coord)?;
+        events.push(update.event);
 
         // AI turn
-        if let Some(mut ai) = self.ai.take() {
-            while self.game.status() == GameStatus::Ongoing
-                && self.game.current_turn() == Turn::Player2
-            {
-                let ai_coord = ai.next_shot();
-                let ai_event = self.record_turn(&mut events, Turn::Player2, ai_coord)?;
-
-                if ai_event.result == ShotResult::AlreadyShot {
-                    panic!("AI fired at an already-shot cell {ai_coord:?}");
-                }
-
-                ai.process_result(ai_coord, ai_event.result);
-
-                if ai_event.result == ShotResult::Miss {
-                    break;
-                }
-            }
-
-            self.ai = Some(ai);
-        }
+        self.ai_turn()?;
 
         Ok(TurnOutcome {
             events,
             status: self.game.status(),
         })
+    }
+
+    pub fn fire_once(
+        &mut self,
+        acting_player: Turn,
+        coord: Coord,
+    ) -> Result<GameUpdate, GameError> {
+        if acting_player != self.game.current_turn() {
+            return Err(GameError::NotPlayersTurn);
+        }
+
+        let mut events = Vec::with_capacity(1);
+        let event = self.record_turn(&mut events, acting_player, coord)?;
+
+        let update = GameUpdate {
+            event,
+            turn: self.game.current_turn(),
+            status: self.game.status(),
+        };
+
+        let _ = self.tx.send(update);
+        Ok(update)
+    }
+
+    pub fn ai_turn(&mut self) -> Result<(), GameError> {
+        let Some(mut ai) = self.ai.take() else {
+            return Ok(());
+        };
+
+        while self.game.status() == GameStatus::Ongoing && self.game.current_turn() == Turn::Player2
+        {
+            let coord = ai.next_shot();
+            let update = self.fire_once(Turn::Player2, coord)?;
+            let event = update.event;
+
+            if event.result == ShotResult::AlreadyShot {
+                panic!("AI fired at an already-shot cell {coord:?}");
+            }
+
+            ai.process_result(coord, event.result);
+
+            if event.result == ShotResult::Miss {
+                break;
+            }
+        }
+        self.ai = Some(ai);
+
+        Ok(())
     }
 
     fn record_turn(

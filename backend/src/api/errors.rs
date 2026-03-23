@@ -7,16 +7,30 @@ use serde::Serialize;
 
 use crate::game::errors::GameError;
 
+#[derive(Debug)]
 pub enum ApiError {
     SessionNotFound,
     InvalidCoordinates,
     Game(GameError),
     InvalidPlayer,
+    Internal,
 }
 
 impl From<GameError> for ApiError {
     fn from(err: GameError) -> Self {
         ApiError::Game(err)
+    }
+}
+
+impl From<serde_json::Error> for ApiError {
+    fn from(_value: serde_json::Error) -> Self {
+        ApiError::Internal
+    }
+}
+
+impl From<axum::Error> for ApiError {
+    fn from(_value: axum::Error) -> Self {
+        ApiError::Internal
     }
 }
 
@@ -41,6 +55,7 @@ impl ApiError {
             ApiError::Game(GameError::Placement(_)) => {
                 (StatusCode::BAD_REQUEST, "Invalid ship placement")
             }
+            ApiError::Internal => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error"),
         }
     }
 }

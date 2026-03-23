@@ -29,7 +29,7 @@ pub struct GetGameQuery {
     pub player: Option<Turn>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ApiCoord {
     pub row: i32,
     pub col: i32,
@@ -62,7 +62,7 @@ impl From<Coord> for ApiCoord {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ApiShipPlacement {
     pub ship_type: ShipType,
     pub start: ApiCoord,

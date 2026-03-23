@@ -2,3 +2,4 @@ pub mod errors;
 pub mod handlers;
 pub mod routes;
 pub mod types;
+pub mod ws;

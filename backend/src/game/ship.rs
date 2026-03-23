@@ -72,7 +72,7 @@ impl Ship {
     }
 }
 
-#[derive(Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Direction {
     Horizontal,
