@@ -1,168 +1,234 @@
-# 🚢 Battleship Game (Rust)
+# 🚢 Battleship Game (Full-Stack Multiplayer)
 
-![Rust](https://img.shields.io/badge/Rust-1.93%2B-orange?logo=rust)
+![Rust](https://img.shields.io/badge/backend-Rust-orange?logo=rust)
+![SvelteKit](https://img.shields.io/badge/frontend-SvelteKit-black?logo=svelte)
 ![Status](https://img.shields.io/badge/status-in%20progress-yellow)
-![Frontend](https://img.shields.io/badge/frontend-planned-blue)
-![Multiplayer](https://img.shields.io/badge/multiplayer-upcoming-purple)
+![WebSocket](https://img.shields.io/badge/realtime-WebSockets-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A modular, extensible **Battleship game engine and backend API** written in Rust with a strong focus on clean architecture, testability, and future real-time multiplayer integration.
+A **full-stack real-time Battleship web application** built with:
 
-The project exposes the game engine through a REST API built with **Axum**, and is designed to evolve into a full-stack multiplayer web application powered by **React + TypeScript**.
+*  **Rust (Axum)** — backend + game engine
+*  **WebSockets** — real-time multiplayer updates
+*  **SvelteKit** — modern frontend UI
+
+Designed with a strong focus on **clean architecture, scalability, and real-time gameplay**.
 
 
 ## Architecture Overview
 
-The engine is designed with strict separation between:
+The project is structured into two main layers:
 
-- Core game logic
-- Player abstraction
-- AI strategy
-- Future networking layer
-- Future presentation layer
+```
+/battleship
+├── backend/   # Rust + Axum (game engine + API + WS)
+└── frontend/  # SvelteKit (UI + real-time client)
+```
 
-This allows the engine to remain:
+### Backend
 
-- Frontend-agnostic
-- Deterministic and testable
-- Easily integrable with WebSocket-based multiplayer systems
-- Suitable for CLI, Web, or WASM environments
+* Game engine (core game logic)
+* Session management
+* REST API
+* WebSocket server (real-time sync)
+
+### Frontend
+
+* Reactive UI (SvelteKit)
+* WebSocket-driven state updates
+* User interaction layer
 
 
-## Implemented Features
+## Features
 
-### Core Engine
+### Core Game Engine
 
-- Strongly-typed board and coordinate system
-- Ship placement validation
-- Turn-based shot handling
-- Hit / Miss / Sunk detection
-- AI opponent with state-aware targeting
+* Strongly-typed board and coordinate system
+* Ship placement validation (including adjacency rules)
+* Turn-based gameplay
+* Hit / Miss / Sunk detection
+* AI opponent with smart targeting
 
-### Backend API
+### Backend API (Axum)
 
-- Axum-based HTTP server
-- Game session management
-- Event-based turn timeline
-- Snapshot endpoint for full game state
-- Health check endpoint
-- Input validation and structured API errors
-- Unit and integration tests
+* Game creation (AI / Multiplayer)
+* Join via 6 character alphanumeric game codes
+* Snapshot-based game state
+* WebSocket real-time updates
+* Structured error handling
+
+### Frontend (SvelteKit)
+
+* Clean, minimal UI
+* Dual-board layout (player vs opponent)
+* Real-time updates via WebSocket
+* Fleet placement (manual + random)
+* Turn-based interaction controls
 
 
 ## Getting Started
 
-### Run the project
+### 1. Run Backend
 
 ```bash
+cd backend
 cargo run
 ```
 
-### Run tests
+Server runs on:
 
-```bash
-cargo test
+```
+http://localhost:3000
 ```
 
-Tested with **Rust 1.93+**
+
+### 2. Run Frontend
+
+```bash
+cd frontend
+bun install
+bun dev
+```
+
+Frontend runs on:
+
+```
+http://localhost:5173
+```
 
 
 ## API Overview
 
-### API Endpoints
+### REST Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Health check endpoint to verify that the backend service is running. |
-| POST | `/api/v1/game` | Creates a new game session and returns a unique `game_id`. |
-| GET | `/api/v1/game/{id}` | Retrieves the current snapshot of the game, including turn, status, and event history. |
-| POST | `/api/v1/game/{id}/fire` | Fires at a coordinate for the specified player and returns the resulting turn events. |
+| Method  | Endpoint                           | Description                    |
+| ------- | ---------------------------------- | ------------------------------ |
+| GET     | `/api/health`                      | Health check                   |
+| POST    | `/api/v1/game`                     | Create game (AI / Multiplayer) |
+| POST    | `/api/v1/game/{code}/join`         | Join game                      |
+| GET     | `/api/v1/game/{code}`              | Get game state                 |
+| GET(WS) | `/api/v1/game/{code}/ws`           | Connect via Websocket          |
+| GET     | `/api/v1/random-fleet`             | Generates a random fleet       |
+| POST    | `/api/v1/game/{code}/place-fleet`  | Place player fleet             |
+| POST    | `/api/v1/game/{code}/fire`         | Fires at a coordinate and returns the resulting turn events. |
+
+> Most endpoints require a `player_token` (returned during game creation/join) to identify the player.
+
+### WebSocket
+
+```
+ws://localhost:3000/api/v1/game/{code}/ws?player_token=...
+```
+
+#### Incoming messages
+
+* `game_state` → initial snapshot
+* `game_update` → real-time updates
+* `random_fleet` → generated fleet
+* `error` → error messages
+
+#### Outgoing messages
+
+* `fire`
+* `place_fleet`
+* `random_fleet`
+
+
+## Game Flow
+
+1. Create or join a game
+2. Place fleet (manual or random)
+3. Wait for opponent
+4. Take turns firing
+5. First player to sink all ships wins
 
 
 ## Roadmap
 
 ### ✔️ Phase 1 – Core Engine
 
-- [x] Domain modeling (Board, Ship, Coord, GameState)
-- [x] Deterministic game state management
-- [x] AI opponent
-- [x] Turn-based shot handling
-- [x] Modular structure
+* [x] Game domain modeling
+* [x] Ship placement validation
+* [x] Turn handling
+* [x] AI opponent
 
 ---
 
-### ✔️ Phase 2 – Engine Hardening
+### ✔️ Phase 2 – Backend (Axum)
 
-- [x] Expanded unit tests
-- [x] Edge-case validation
-- [x] Improved AI targeting strategy
-- [x] Error handling refinement
-
----
-
-### ✔️ Phase 3 – Web Backend (Axum)
-
-- [x] Axum server setup
-- [x] Game session management
-- [x] State synchronization
-- [x] Serde-based serialization
-- [x] Core REST API implementation
+* [x] REST API
+* [x] Game sessions
+* [x] Snapshot system
+* [x] WebSocket integration
 
 ---
 
-### 🎨 Phase 4 – React Frontend
+### 🎨 Phase 3 – Frontend (SvelteKit)
 
-- [ ] Interactive board rendering
-- [ ] Ship placement UI
-- [ ] Real-time game updates via WebSocket
-- [ ] Visual feedback for hits/misses
-- [ ] Responsive layout
+* [x] Project setup
+* [x] Routing
+* [ ] Game UI polish
+* [ ] Fleet placement UX improvements
+* [ ] Turn indicators & animations
 
 ---
 
-### 👥 Phase 5 – Multiplayer
+### 👥 Phase 4 – Multiplayer Enhancements
 
-- [ ] Online PvP mode
-- [ ] Matchmaking & Room/lobby system
-- [ ] Reconnection handling
-- [ ] Match lifecycle management
+* [ ] Lobby / matchmaking
+* [ ] Reconnection support
+* [ ] Persistent sessions
+* [ ] Spectator mode
 
 
+## Tech Stack
 
-## Planned Tech Stack
+### Backend
 
-**Backend + API**
-- Rust
-- Axum
-- Tokio
-- WebSockets
-- Serde
+* Rust
+* Axum
+* Tokio
+* WebSockets
+* Serde
 
-**Frontend**
-- React
-- TypeScript
+### Frontend
+
+* SvelteKit (latest)
+* TailwindCSS (v4)
+* WebSocket API
+
+
+## Key Design Principles
+
+* Separation of concerns (engine vs API vs UI)
+* Real-time first architecture
+* Deterministic game logic
+* Frontend-agnostic backend
+* Scalable session management
 
 
 ## Contributing
 
-Contributions, suggestions, and discussions are welcome.
+Contributions are welcome.
 
-Areas that are especially helpful:
+Good areas to contribute:
 
-- Improving test coverage
-- Refining API design
-- Enhancing AI strategy
-- Reviewing architecture decisions
-- Preparing the engine for networking integration
-
-If you're interested, feel free to open an issue or start a discussion.
+* UI/UX improvements
+* Multiplayer robustness
+* AI enhancements
+* Testing & edge cases
+* Performance optimization
 
 
 ## Project Vision
 
-To build a clean, reusable Battleship engine that can serve as a foundation for a full-stack, real-time multiplayer application while demonstrating sound Rust architecture principles.
+To build a **production-quality, real-time multiplayer Battleship game** while showcasing:
+
+* Clean Rust backend architecture
+* Modern frontend engineering with SvelteKit
+* WebSocket-driven real-time systems
 
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+MIT License — see `LICENSE` file.
