@@ -11,6 +11,7 @@ pub enum GameError {
     GameAlreadyFinished,
     NotPlayersTurn,
     InvalidGameState,
+    GameFull,
     Placement(PlacementError),
 }
 

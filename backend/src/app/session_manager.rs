@@ -19,17 +19,31 @@ impl SessionManager {
         self.sessions.get(id).cloned()
     }
 
-    pub fn create_vs_ai(&mut self) -> Uuid {
+    pub fn create_vs_ai(&mut self) -> (Uuid, Uuid) {
         let id = Uuid::new_v4();
-        let session = Arc::new(Mutex::new(GameSession::new_vs_ai()));
-        self.sessions.insert(id, session);
-        id
+        let session_arc = Arc::new(Mutex::new(GameSession::new_vs_ai()));
+
+        let player1_token = {
+            let session = session_arc.lock().unwrap();
+            session.player1_token()
+        };
+
+        self.sessions.insert(id, session_arc);
+
+        (id, player1_token)
     }
 
-    pub fn create_multiplayer(&mut self) -> Uuid {
+    pub fn create_multiplayer(&mut self) -> (Uuid, Uuid) {
         let id = Uuid::new_v4();
-        let session = Arc::new(Mutex::new(GameSession::new_vs_multiplayer()));
-        self.sessions.insert(id, session);
-        id
+        let session_arc = Arc::new(Mutex::new(GameSession::new_vs_multiplayer()));
+
+        let player1_token = {
+            let session = session_arc.lock().unwrap();
+            session.player1_token()
+        };
+
+        self.sessions.insert(id, session_arc);
+
+        (id, player1_token)
     }
 }

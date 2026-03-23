@@ -1,5 +1,6 @@
 use serde::Serialize;
 use tokio::sync::broadcast;
+use uuid::Uuid;
 
 use crate::app::board_view::{BoardPerspective, BoardView};
 use crate::game::ai::AiPlayer;
@@ -53,12 +54,17 @@ pub struct GameSession {
     ai: Option<AiPlayer>,
     history: Vec<TurnEvent>,
     tx: broadcast::Sender<GameUpdate>,
+    player1_token: Uuid,
+    player2_token: Option<Uuid>,
 }
 
 impl GameSession {
     pub fn new_vs_ai() -> Self {
         let player1 = Player::new();
+        let player1_token = Uuid::new_v4();
+
         let player2 = Player::new();
+
         let (tx, _) = broadcast::channel(32);
         let mut game = GameState::new(player1, player2);
 
@@ -73,12 +79,17 @@ impl GameSession {
             ai,
             history: Vec::new(),
             tx,
+            player1_token,
+            player2_token: None,
         }
     }
 
     pub fn new_vs_multiplayer() -> Self {
         let player1 = Player::new();
+        let player1_token = Uuid::new_v4();
+
         let player2 = Player::new();
+
         let (tx, _) = broadcast::channel(32);
 
         let game = GameState::new(player1, player2);
@@ -88,6 +99,8 @@ impl GameSession {
             ai: None,
             history: Vec::new(),
             tx,
+            player1_token,
+            player2_token: None,
         }
     }
 
@@ -105,6 +118,35 @@ impl GameSession {
 
     pub fn subscribe(&self) -> broadcast::Receiver<GameUpdate> {
         self.tx.subscribe()
+    }
+
+    pub fn player1_token(&self) -> Uuid {
+        self.player1_token
+    }
+
+    pub fn player2_token(&self) -> Option<Uuid> {
+        self.player2_token
+    }
+
+    pub fn join_player(&mut self) -> Result<Uuid, GameError> {
+        if self.player2_token().is_some() {
+            return Err(GameError::GameFull);
+        }
+
+        let player_token = Uuid::new_v4();
+        self.player2_token = Some(player_token);
+
+        Ok(player_token)
+    }
+
+    pub fn player_from_token(&self, token: Uuid) -> Option<Turn> {
+        if token == self.player1_token {
+            Some(Turn::Player1)
+        } else if Some(token) == self.player2_token {
+            Some(Turn::Player2)
+        } else {
+            None
+        }
     }
 
     pub fn snapshot_for(&self, viewer: Turn) -> GameSnapshot {

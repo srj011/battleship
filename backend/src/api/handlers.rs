@@ -25,12 +25,31 @@ pub async fn create_game(
 ) -> Json<CreateGameResponse> {
     let mut manager = manager.lock().unwrap();
 
-    let game_id = match request.mode {
+    let (game_id, player_token) = match request.mode {
         GameMode::Ai => manager.create_vs_ai(),
         GameMode::Multiplayer => manager.create_multiplayer(),
     };
 
-    Json(CreateGameResponse { game_id })
+    Json(CreateGameResponse {
+        game_id,
+        player_token,
+    })
+}
+
+pub async fn join_game(
+    Path(id): Path<Uuid>,
+    State(manager): State<Arc<Mutex<SessionManager>>>,
+) -> Result<Json<JoinGameResponse>, ApiError> {
+    let session_arc = {
+        let manager = manager.lock().unwrap();
+        manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
+    };
+
+    let mut session = session_arc.lock().unwrap();
+
+    let player_token = session.join_player()?;
+
+    Ok(Json(JoinGameResponse { player_token }))
 }
 
 pub async fn get_game(
@@ -38,13 +57,15 @@ pub async fn get_game(
     State(manager): State<Arc<Mutex<SessionManager>>>,
     Query(query): Query<GetGameQuery>,
 ) -> Result<Json<GameSnapshot>, ApiError> {
-    let session = {
+    let session_arc = {
         let manager = manager.lock().unwrap();
         manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
     };
-    let session = session.lock().unwrap();
+    let session = session_arc.lock().unwrap();
 
-    let player = query.player.ok_or(ApiError::InvalidPlayer)?;
+    let player = session
+        .player_from_token(query.player_token)
+        .ok_or(ApiError::InvalidPlayer)?;
     Ok(Json(session.snapshot_for(player)))
 }
 
@@ -59,15 +80,19 @@ pub async fn place_fleet(
         .map(TryInto::try_into)
         .collect::<Result<Vec<_>, _>>()?;
 
-    let session = {
+    let session_arc = {
         let manager = manager.lock().unwrap();
         manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
     };
-    let mut session = session.lock().unwrap();
+    let mut session = session_arc.lock().unwrap();
 
-    session.place_fleet(request.player, placements)?;
+    let player = session
+        .player_from_token(request.player_token)
+        .ok_or(ApiError::InvalidPlayer)?;
 
-    Ok(Json(session.snapshot_for(request.player)))
+    session.place_fleet(player, placements)?;
+
+    Ok(Json(session.snapshot_for(player)))
 }
 
 pub async fn random_fleet() -> Json<Vec<ApiShipPlacement>> {
@@ -90,13 +115,17 @@ pub async fn fire(
         return Err(ApiError::InvalidCoordinates);
     }
 
-    let session = {
+    let session_arc = {
         let manager = manager.lock().unwrap();
         manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
     };
-    let mut session = session.lock().unwrap();
+    let mut session = session_arc.lock().unwrap();
 
-    let outcome = session.player_fire(request.player, coord)?;
+    let player = session
+        .player_from_token(request.player_token)
+        .ok_or(ApiError::InvalidPlayer)?;
+
+    let outcome = session.player_fire(player, coord)?;
 
     Ok(Json(outcome))
 }
