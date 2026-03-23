@@ -40,14 +40,14 @@ pub async fn join_game(
     Path(id): Path<Uuid>,
     State(manager): State<Arc<Mutex<SessionManager>>>,
 ) -> Result<Json<JoinGameResponse>, ApiError> {
-    let session = {
+    let session_arc = {
         let manager = manager.lock().unwrap();
         manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
     };
 
-    let mut session_guard = session.lock().unwrap();
+    let mut session = session_arc.lock().unwrap();
 
-    let player_token = session_guard.join_player()?;
+    let player_token = session.join_player()?;
 
     Ok(Json(JoinGameResponse { player_token }))
 }
@@ -78,11 +78,11 @@ pub async fn place_fleet(
         .map(TryInto::try_into)
         .collect::<Result<Vec<_>, _>>()?;
 
-    let session = {
+    let session_arc = {
         let manager = manager.lock().unwrap();
         manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
     };
-    let mut session = session.lock().unwrap();
+    let mut session = session_arc.lock().unwrap();
 
     session.place_fleet(request.player, placements)?;
 
@@ -109,11 +109,11 @@ pub async fn fire(
         return Err(ApiError::InvalidCoordinates);
     }
 
-    let session = {
+    let session_arc = {
         let manager = manager.lock().unwrap();
         manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
     };
-    let mut session = session.lock().unwrap();
+    let mut session = session_arc.lock().unwrap();
 
     let outcome = session.player_fire(request.player, coord)?;
 

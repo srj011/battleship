@@ -56,14 +56,13 @@ async fn handle_socket(
         manager.get_session(&game_id)
     };
 
-    let (session, mut rx) = match session_opt {
-        Some(s) => {
-            let session = s;
+    let (session_arc, mut rx) = match session_opt {
+        Some(session_arc) => {
             let rx = {
-                let session_guard = session.lock().unwrap();
-                session_guard.subscribe()
+                let session = session_arc.lock().unwrap();
+                session.subscribe()
             };
-            (session, rx)
+            (session_arc, rx)
         }
         None => {
             eprintln!("[WS] Error: Session not found");
@@ -86,12 +85,12 @@ async fn handle_socket(
 
     // Inital message
     let initial_message = {
-        let session_guard = session.lock().unwrap();
-        let snapshot = session_guard.snapshot_for(player);
+        let session = session_arc.lock().unwrap();
+        let snapshot = session.snapshot_for(player);
 
         ServerMessage::GameState {
-            turn: session_guard.current_turn(),
-            status: session_guard.status(),
+            turn: session.current_turn(),
+            status: session.status(),
             player_board: snapshot.player_board,
             opponent_board: snapshot.opponent_board,
         }
@@ -113,7 +112,7 @@ async fn handle_socket(
                     Some(Ok(Message::Text(text))) => {
                         match serde_json::from_str::<ClientMessage>(&text) {
                             Ok(ClientMessage::Fire { coord }) => {
-                                if let Err(e) = handle_fire(session.clone(), player, coord).await {
+                                if let Err(e) = handle_fire(session_arc.clone(), player, coord).await {
                                     eprintln!("[WS] error: {e:?}");
                                     let server_msg = map_error_to_message(e);
                                     let error_msg = to_ws_message(server_msg);
@@ -129,7 +128,7 @@ async fn handle_socket(
 
                             Ok(ClientMessage::PlaceFleet { fleet }) => {
                                 eprintln!("[WS] Fleet placement requested");
-                                match handle_place_fleet(session.clone(), player, fleet).await {
+                                match handle_place_fleet(session_arc.clone(), player, fleet).await {
                                     Ok(message) => {
                                         let _ = sender.send(to_ws_message(message)).await;
                                     },
@@ -162,8 +161,8 @@ async fn handle_socket(
                 match update {
                     Ok(update) => {
                         let message = {
-                            let session_guard = session.lock().unwrap();
-                            let snapshot = session_guard.snapshot_for(player);
+                            let session = session_arc.lock().unwrap();
+                            let snapshot = session.snapshot_for(player);
 
                             ServerMessage::GameUpdate {
                                 event: update.event,
@@ -199,7 +198,7 @@ async fn handle_random_fleet() -> ServerMessage {
 }
 
 async fn handle_place_fleet(
-    session: Arc<Mutex<GameSession>>,
+    session_arc: Arc<Mutex<GameSession>>,
     player: Turn,
     fleet: Vec<ApiShipPlacement>,
 ) -> Result<ServerMessage, ApiError> {
@@ -208,27 +207,27 @@ async fn handle_place_fleet(
         .map(TryInto::try_into)
         .collect::<Result<Vec<_>, _>>()?;
 
-    let mut session_guard = session.lock().unwrap();
-    session_guard.place_fleet(player, placements)?;
-    let snapshot = session_guard.snapshot_for(player);
+    let mut session = session_arc.lock().unwrap();
+    session.place_fleet(player, placements)?;
+    let snapshot = session.snapshot_for(player);
 
     Ok(ServerMessage::GameState {
-        turn: session_guard.current_turn(),
-        status: session_guard.status(),
+        turn: session.current_turn(),
+        status: session.status(),
         player_board: snapshot.player_board,
         opponent_board: snapshot.opponent_board,
     })
 }
 
 async fn handle_fire(
-    session: Arc<Mutex<GameSession>>,
+    session_arc: Arc<Mutex<GameSession>>,
     player: Turn,
     coord: ApiCoord,
 ) -> Result<(), ApiError> {
     let coord: Coord = coord.try_into()?;
 
-    let mut session_guard = session.lock().unwrap();
-    session_guard.player_fire(player, coord)?;
+    let mut session = session_arc.lock().unwrap();
+    session.player_fire(player, coord)?;
 
     Ok(())
 }
