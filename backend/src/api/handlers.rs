@@ -4,7 +4,6 @@ use axum::{
 };
 use serde_json::json;
 use std::sync::{Arc, Mutex};
-use uuid::Uuid;
 
 use super::errors::ApiError;
 use super::types::*;
@@ -25,24 +24,26 @@ pub async fn create_game(
 ) -> Json<CreateGameResponse> {
     let mut manager = manager.lock().unwrap();
 
-    let (game_id, player_token) = match request.mode {
+    let (game_code, player_token) = match request.mode {
         GameMode::Ai => manager.create_vs_ai(),
         GameMode::Multiplayer => manager.create_multiplayer(),
     };
 
     Json(CreateGameResponse {
-        game_id,
+        game_code,
         player_token,
     })
 }
 
 pub async fn join_game(
-    Path(id): Path<Uuid>,
+    Path(code): Path<String>,
     State(manager): State<Arc<Mutex<SessionManager>>>,
 ) -> Result<Json<JoinGameResponse>, ApiError> {
     let session_arc = {
         let manager = manager.lock().unwrap();
-        manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
+        manager
+            .get_session_by_code(&code)
+            .ok_or(ApiError::SessionNotFound)?
     };
 
     let mut session = session_arc.lock().unwrap();
@@ -53,13 +54,15 @@ pub async fn join_game(
 }
 
 pub async fn get_game(
-    Path(id): Path<Uuid>,
+    Path(code): Path<String>,
     State(manager): State<Arc<Mutex<SessionManager>>>,
     Query(query): Query<GetGameQuery>,
 ) -> Result<Json<GameSnapshot>, ApiError> {
     let session_arc = {
         let manager = manager.lock().unwrap();
-        manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
+        manager
+            .get_session_by_code(&code)
+            .ok_or(ApiError::SessionNotFound)?
     };
     let session = session_arc.lock().unwrap();
 
@@ -70,7 +73,7 @@ pub async fn get_game(
 }
 
 pub async fn place_fleet(
-    Path(id): Path<Uuid>,
+    Path(code): Path<String>,
     State(manager): State<Arc<Mutex<SessionManager>>>,
     Json(request): Json<PlaceFleetRequest>,
 ) -> Result<Json<GameSnapshot>, ApiError> {
@@ -82,7 +85,9 @@ pub async fn place_fleet(
 
     let session_arc = {
         let manager = manager.lock().unwrap();
-        manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
+        manager
+            .get_session_by_code(&code)
+            .ok_or(ApiError::SessionNotFound)?
     };
     let mut session = session_arc.lock().unwrap();
 
@@ -105,7 +110,7 @@ pub async fn random_fleet() -> Json<Vec<ApiShipPlacement>> {
 }
 
 pub async fn fire(
-    Path(id): Path<Uuid>,
+    Path(code): Path<String>,
     State(manager): State<Arc<Mutex<SessionManager>>>,
     Json(request): Json<FireRequest>,
 ) -> Result<Json<TurnOutcome>, ApiError> {
@@ -117,7 +122,9 @@ pub async fn fire(
 
     let session_arc = {
         let manager = manager.lock().unwrap();
-        manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
+        manager
+            .get_session_by_code(&code)
+            .ok_or(ApiError::SessionNotFound)?
     };
     let mut session = session_arc.lock().unwrap();
 

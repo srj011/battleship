@@ -8,7 +8,6 @@ use axum::{
 use futures::{SinkExt, StreamExt};
 use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast;
-use uuid::Uuid;
 
 use crate::api::errors::ApiError;
 use crate::api::types::{ApiCoord, ApiShipPlacement, WsQuery};
@@ -23,13 +22,15 @@ use crate::game::ship::ShipPlacement;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
-    Path(id): Path<Uuid>,
+    Path(code): Path<String>,
     Query(query): Query<WsQuery>,
     State(manager): State<Arc<Mutex<SessionManager>>>,
 ) -> Result<impl IntoResponse, ApiError> {
     let session_arc = {
         let manager = manager.lock().unwrap();
-        manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
+        manager
+            .get_session_by_code(&code)
+            .ok_or(ApiError::SessionNotFound)?
     };
 
     let player = {
@@ -39,12 +40,12 @@ pub async fn ws_handler(
             .ok_or(ApiError::InvalidPlayer)?
     };
 
-    Ok(ws.on_upgrade(move |socket| handle_socket(socket, id, player, manager)))
+    Ok(ws.on_upgrade(move |socket| handle_socket(socket, code, player, manager)))
 }
 
 async fn handle_socket(
     socket: WebSocket,
-    game_id: Uuid,
+    game_code: String,
     player: Turn,
     manager: Arc<Mutex<SessionManager>>,
 ) {
@@ -53,7 +54,7 @@ async fn handle_socket(
     // Get Session
     let session_opt = {
         let manager = manager.lock().unwrap();
-        manager.get_session(&game_id)
+        manager.get_session_by_code(&game_code)
     };
 
     let (session_arc, mut rx) = match session_opt {
@@ -81,7 +82,7 @@ async fn handle_socket(
         }
     };
 
-    eprintln!("[WS] Connected: {game_id} as {player:?}");
+    eprintln!("[WS] Connected: {game_code} as {player:?}");
 
     // Inital message
     let initial_message = {
@@ -186,7 +187,7 @@ async fn handle_socket(
             }
         }
     }
-    eprintln!("[WS] Disconnected: {game_id} for {player:?}");
+    eprintln!("[WS] Disconnected: {game_code} for {player:?}");
 }
 
 async fn handle_random_fleet() -> ServerMessage {

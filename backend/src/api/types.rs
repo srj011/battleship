@@ -20,7 +20,7 @@ pub struct CreateGameRequest {
 
 #[derive(Serialize)]
 pub struct CreateGameResponse {
-    pub game_id: Uuid,
+    pub game_code: String,
     pub player_token: Uuid,
 }
 

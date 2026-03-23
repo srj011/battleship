@@ -11,11 +11,11 @@ use crate::app::session_manager::SessionManager;
 pub fn create_router(manager: Arc<Mutex<SessionManager>>) -> Router {
     let game_routes = Router::new()
         .route("/", post(create_game))
-        .route("/{id}", get(get_game))
-        .route("/{id}/join", post(join_game))
-        .route("/{id}/place-fleet", post(place_fleet))
-        .route("/{id}/fire", post(fire))
-        .route("/{id}/ws", get(ws_handler));
+        .route("/{code}", get(get_game))
+        .route("/{code}/join", post(join_game))
+        .route("/{code}/place-fleet", post(place_fleet))
+        .route("/{code}/fire", post(fire))
+        .route("/{code}/ws", get(ws_handler));
 
     let api_v1 = Router::new()
         .nest("/game", game_routes)
