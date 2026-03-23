@@ -1,42 +1,80 @@
-# sv
+# Battleship Frontend (SvelteKit)
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Frontend for the Battleship multiplayer game, built with **SvelteKit** and **TailwindCSS v4**.
 
-## Creating a project
+## Overview
 
-If you're seeing this, you've probably already done this step. Congrats!
+This frontend connects to the Rust backend via:
 
-```sh
-# create a new project
-npx sv create my-app
+- REST API (initial actions)
+- WebSockets (real-time game updates)
+
+Provides a clean, responsive UI for:
+
+- Game creation and joining
+- Fleet placement
+- Turn-based gameplay
+- Real-time updates
+
+## Development
+
+### Install dependencies
+
+```bash
+bun install
 ```
 
-To recreate this project with the same configuration:
+### Run dev server
 
-```sh
-# recreate this project
-bun x sv@0.12.8 create --template minimal --types ts --add prettier eslint tailwindcss="plugins:none" --install bun frontend
+```bash
+bun dev
 ```
 
-## Developing
+App runs on:
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+```
+http://localhost:5173
 ```
 
-## Building
+## Backend Requirement
 
-To create a production version of your app:
+Make sure backend is running:
 
-```sh
-npm run build
+```
+http://localhost:3000
 ```
 
-You can preview the production build with `npm run preview`.
+Frontend expects the backend API to be available at this address.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## Structure
+
+```
+src/
+├── routes/          # Pages (home, game)
+├── lib/
+│   ├── api/         # REST + WebSocket clients
+│   ├── stores/      # Global state
+│   └── components/  # UI components
+```
+
+## Tech Stack
+
+- SvelteKit (latest)
+- TailwindCSS v4
+- TypeScript
+- WebSocket API
+
+## Notes
+
+- Uses URL-based session:
+
+  ```
+  /game/{code}?player_token=...
+  ```
+
+- WebSocket provides the game state
+- UI is designed to be minimal and responsive
+
+## Status
+
+In active development — UI/UX improvements ongoing
