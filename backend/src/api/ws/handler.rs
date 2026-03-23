@@ -1,6 +1,6 @@
 use axum::{
     extract::{
-        Path, State,
+        Path, Query, State,
         ws::{Message, WebSocket, WebSocketUpgrade},
     },
     response::IntoResponse,
@@ -11,7 +11,7 @@ use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::api::errors::ApiError;
-use crate::api::types::{ApiCoord, ApiShipPlacement};
+use crate::api::types::{ApiCoord, ApiShipPlacement, WsQuery};
 use crate::api::ws::messages::{ClientMessage, ServerMessage};
 use crate::app::game_session::GameSession;
 use crate::app::session_manager::SessionManager;
@@ -23,10 +23,23 @@ use crate::game::ship::ShipPlacement;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
-    Path((id, player)): Path<(Uuid, Turn)>,
+    Path(id): Path<Uuid>,
+    Query(query): Query<WsQuery>,
     State(manager): State<Arc<Mutex<SessionManager>>>,
-) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, id, player, manager))
+) -> Result<impl IntoResponse, ApiError> {
+    let session_arc = {
+        let manager = manager.lock().unwrap();
+        manager.get_session(&id).ok_or(ApiError::SessionNotFound)?
+    };
+
+    let player = {
+        let session = session_arc.lock().unwrap();
+        session
+            .player_from_token(query.token)
+            .ok_or(ApiError::InvalidPlayer)?
+    };
+
+    Ok(ws.on_upgrade(move |socket| handle_socket(socket, id, player, manager)))
 }
 
 async fn handle_socket(

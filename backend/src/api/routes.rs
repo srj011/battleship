@@ -15,7 +15,7 @@ pub fn create_router(manager: Arc<Mutex<SessionManager>>) -> Router {
         .route("/{id}/join", post(join_game))
         .route("/{id}/place-fleet", post(place_fleet))
         .route("/{id}/fire", post(fire))
-        .route("/{id}/ws/{player}", get(ws_handler));
+        .route("/{id}/ws", get(ws_handler));
 
     let api_v1 = Router::new()
         .nest("/game", game_routes)

@@ -35,6 +35,11 @@ pub struct GetGameQuery {
     pub player: Option<Turn>,
 }
 
+#[derive(Deserialize)]
+pub struct WsQuery {
+    pub token: Uuid,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ApiCoord {
     pub row: i32,
