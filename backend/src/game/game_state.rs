@@ -22,11 +22,11 @@ impl Turn {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum GameStatus {
     PlacingShips,
     Ongoing,
-    Winner(Turn),
+    Finished { winner: Turn },
 }
 
 pub struct GameState {
@@ -104,7 +104,7 @@ impl GameState {
     }
 
     pub fn take_turn(&mut self, coord: Coord) -> Result<ShotResult, GameError> {
-        if let GameStatus::Winner(_) = self.status {
+        if let GameStatus::Finished { winner: _ } = self.status {
             return Err(GameError::GameAlreadyFinished);
         }
 
@@ -123,7 +123,9 @@ impl GameState {
         };
 
         if opponent_lost {
-            self.status = GameStatus::Winner(self.current_turn);
+            self.status = GameStatus::Finished {
+                winner: self.current_turn,
+            };
             return Ok(result);
         }
 

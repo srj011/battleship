@@ -5,11 +5,11 @@ use crate::game::coord::Coord;
 use crate::game::ship::ShipType;
 
 #[derive(Debug, Clone, Copy, Serialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(tag = "type", rename_all = "lowercase")]
 pub enum CellView {
     Unknown,
     Empty,
-    Ship(ShipType),
+    Ship { ship_type: ShipType },
     Hit,
     Miss,
 }
@@ -37,7 +37,7 @@ impl BoardView {
                         BoardPerspective::Opponent => CellView::Unknown,
                     },
                     Cell::Ship(ship_type) => match perspective {
-                        BoardPerspective::Owner => CellView::Ship(ship_type),
+                        BoardPerspective::Owner => CellView::Ship { ship_type },
                         BoardPerspective::Opponent => CellView::Unknown,
                     },
                     Cell::Hit(_) => CellView::Hit,
