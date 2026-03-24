@@ -21,7 +21,7 @@
     }
 </script>
 
-<div class="gap-6">
+<div class="flex flex-col items-center gap-2">
     <h1 class="text-2xl font-bold">Game</h1>
 
     {#if !$gameStore.connected}
