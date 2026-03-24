@@ -12,7 +12,7 @@ use tokio::sync::broadcast;
 use crate::api::errors::ApiError;
 use crate::api::types::{ApiCoord, ApiShipPlacement, WsQuery};
 use crate::api::ws::messages::{ClientMessage, ServerMessage};
-use crate::app::game_session::GameSession;
+use crate::app::game_session::{GameSession, GameUpdate};
 use crate::app::session_manager::SessionManager;
 use crate::game::coord::Coord;
 use crate::game::errors::GameError;
@@ -165,12 +165,20 @@ async fn handle_socket(
                             let session = session_arc.lock().unwrap();
                             let snapshot = session.snapshot_for(player);
 
-                            ServerMessage::GameUpdate {
-                                event: update.event,
-                                turn: update.turn,
-                                status: update.status,
-                                player_board: snapshot.player_board,
-                                opponent_board: snapshot.opponent_board,
+                            match update {
+                                GameUpdate::StateChanged => ServerMessage::GameState {
+                                    turn: session.current_turn(),
+                                    status: session.status(),
+                                    player_board: snapshot.player_board,
+                                    opponent_board: snapshot.opponent_board,
+                                },
+                                GameUpdate::ShotFired{ event } => ServerMessage::GameUpdate {
+                                    event,
+                                    turn: session.current_turn(),
+                                    status: session.status(),
+                                    player_board: snapshot.player_board,
+                                    opponent_board: snapshot.opponent_board,
+                                }
                             }
                         };
 
