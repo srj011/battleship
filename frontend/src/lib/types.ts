@@ -33,6 +33,7 @@ export type GameStatus =
 
 export type GameState = {
     type: 'game_state';
+    player: Player;
     turn: Player;
     status: GameStatus;
     player_board: BoardView;

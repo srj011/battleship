@@ -4,7 +4,15 @@
     import Board from '$lib/components/Board.svelte';
     import type { Coord, FireMessage } from '$lib/types';
 
+    const isMyTurn = $derived(
+        $gameStore.game?.status.type === "ongoing" &&
+        $gameStore.player !== null &&
+        $gameStore.player === $gameStore.game.turn
+    );
+
     function handleFire(args: {coord: Coord}) {
+        if (!isMyTurn) return;
+
         let msg: FireMessage = {
             type: "fire",
             coord: args.coord,
@@ -21,24 +29,34 @@
     {/if}
 
     {#if $gameStore.game}
-        <div class="flex gap-10">
+        <!-- Turn Indicator -->
+        <div class={`text-lg font-semibold ${
+            isMyTurn ? "text-green-500" : "text-gray-400"
+        }`}>
+            {isMyTurn ? "Your Turn" : "Opponent's Turn"}
+        </div>
 
-            <p>Turn: {$gameStore.game.turn}</p>
+        <!-- Board's flexbox -->
+        <div class="flex gap-16">
 
             <!-- Player's board -->
-            <div>
-                <h2 class="text-lg font-semibold mb-2">Your Board</h2>
+            <div class={`p-2 rounded ${
+                isMyTurn ? "opacity-60" : ""
+            }`}>
                 <Board board={$gameStore.game.player_board} />
+                <p class="text-sm text-center my-3">Your board</p>
             </div>
 
             <!-- Opponent's board-->
-            <div>
-                <h2 class="text-lg font-semibold mb-2">Opponent's Board</h2>
+            <div class={`p-2 rounded ${
+                !isMyTurn ? "opacity-60" : ""
+            }`}>
                 <Board
                     board={$gameStore.game.opponent_board}
-                    clickable={true}
+                    clickable={isMyTurn}
                     onCellClick={handleFire}
                 />
+                <p class="text-sm text-center my-3">Opponent's board</p>
             </div>
         </div>
     {/if}

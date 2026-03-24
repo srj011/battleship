@@ -16,10 +16,12 @@ export function connectWS(code: string, token: string) {
 
     socket.onmessage = (messageEvent) => {
         const msg: ServerMessage = JSON.parse(messageEvent.data);
+        console.log(msg);
 
         switch (msg.type) {
             case "game_state":
                 gameStore.setGame(msg);
+                gameStore.setPlayer(msg.player);
                 break;
 
             case "game_update":

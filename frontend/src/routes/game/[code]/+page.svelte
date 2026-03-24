@@ -27,7 +27,6 @@
     {:else if !$gameStore.game}
         <p>Loading game...</p>
     {:else}
-        <p class="font-semibold text-green-500 text-2xl">Status: {$gameStore.game.status.type}</p>
         {#if $gameStore.game.status.type === 'placing_ships'}
             <PlacingShipsPhase />
         {:else if $gameStore.game.status.type === 'ongoing'}
