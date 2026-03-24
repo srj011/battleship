@@ -70,6 +70,16 @@ export type ServerMessage =
     | RandomFleet
     | ErrorMessage;
 
+export type GameSnapshot = {
+    turn: Player;
+    status: GameStatus;
+    player_board: BoardView;
+    opponent_board: BoardView;
+}
+
+export type RandomFleetMessage = {
+    type: 'random_fleet'
+};
 
 export type PlaceFleetMessage = {
 	type: 'place_fleet';
@@ -81,9 +91,8 @@ export type FireMessage = {
 	coord: Coord;
 };
 
-export type GameSnapshot = {
-    turn: Player;
-    status: GameStatus;
-    player_board: BoardView;
-    opponent_board: BoardView;
-}
+export type ClientMessage = 
+    | RandomFleetMessage
+    | PlaceFleetMessage
+    | FireMessage;
+    
