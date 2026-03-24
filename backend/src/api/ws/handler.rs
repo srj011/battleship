@@ -90,6 +90,7 @@ async fn handle_socket(
         let snapshot = session.snapshot_for(player);
 
         ServerMessage::GameState {
+            player,
             turn: session.current_turn(),
             status: session.status(),
             player_board: snapshot.player_board,
@@ -167,6 +168,7 @@ async fn handle_socket(
 
                             match update {
                                 GameUpdate::StateChanged => ServerMessage::GameState {
+                                    player,
                                     turn: session.current_turn(),
                                     status: session.status(),
                                     player_board: snapshot.player_board,
@@ -221,6 +223,7 @@ async fn handle_place_fleet(
     let snapshot = session.snapshot_for(player);
 
     Ok(ServerMessage::GameState {
+        player,
         turn: session.current_turn(),
         status: session.status(),
         player_board: snapshot.player_board,
