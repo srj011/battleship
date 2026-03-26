@@ -158,6 +158,10 @@
         sendWS(msg);
     }
 
+    function handleHover(coord: Coord) {
+        hoverCoord = coord;
+    }
+
     function handleClick(coord: Coord) {
         const existing = getShipAt(coord);
 
@@ -218,6 +222,13 @@
         committedShip = null;
     }
 
+    function isCellClickable(cell: PreviewCell): boolean {
+        if (activeShip) {
+            return cell.type === 'empty' || cell.type === 'preview-valid';
+        } else {
+            return cell.type === 'placed';
+        }
+    }
 </script>
 
 <svelte:window
@@ -232,24 +243,28 @@
 
     <!-- Board Preview -->
     <div>
-        <h3 class="text-lg font-medium mb-2">Preview Board</h3>
-        <Board board={previewBoard} />
+        <h3 class="mb-2 text-lg font-medium">Preview Board</h3>
+        <Board
+            board={previewBoard}
+            clickable={true}
+            onCellClick={handleClick}
+            onRightClick={handleRightClick}
+            onCellHover={handleHover}
+            isCellClickable={(cell) => isCellClickable(cell as PreviewCell)}
+        />
     </div>
 
     <!-- Controls-->
     <div class="flex gap-4">
-        <button 
-            class="px-4 py-2 bg-blue-500 text-white rounded"
-            onclick={generateRandomFleet}
-        >
+        <button class="rounded bg-blue-500 px-4 py-2 text-white" onclick={generateRandomFleet}>
             Randomize Fleet
         </button>
         <button
-            class="px-4 py-2 bg-green-500 text-white rounded disabled:opacity-50"
+            class="rounded bg-green-500 px-4 py-2 text-white disabled:opacity-50"
             onclick={placeFleet}
-            disabled={!$gameStore.previewFleet}
+            disabled={placements.length !== TOTAL_SHIPS}
         >
             Confirm Placement
         </button>
-    </div> 
+    </div>
 </div>

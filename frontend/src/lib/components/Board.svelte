@@ -52,9 +52,6 @@
         }
     }
 
-    function isCellClickable(cell: CellView) {
-        return cell.type === 'unknown';
-    }
 </script>
 
 <div class="grid grid-cols-[auto_repeat(10,2.5rem)] items-center">
