@@ -196,10 +196,20 @@
             placements.push(existing);
         }
     }
+
+    function handleCancel() {
+        if (!activeShip || !committedShip) return;
+
+        placements.push(committedShip);
+        activeShip = null;
+        committedShip = null;
+    }
+
 </script>
 
 <svelte:window
     onkeydown={(e) => {
+        if (e.key === 'Escape') handleCancel();
         if (e.key.toLowerCase() === 'r') toggleDirection();
     }}
 />
