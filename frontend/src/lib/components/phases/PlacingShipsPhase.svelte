@@ -62,6 +62,10 @@
         };
     }
 
+    function toggleDirection() {
+        if (!activeShip) return;
+        activeShip.direction = activeShip?.direction === 'horizontal' ? 'vertical' : 'horizontal';
+    }
 
     function getShipAt(coord: Coord): ShipPlacement | null {
         const cell = previewBoard.cells[coord.row][coord.col];
@@ -168,7 +172,37 @@
         activeShip = null;
         committedShip = null;
     }
+
+    function handleRightClick(coord: Coord) {
+        // Active ship
+        if (activeShip) {
+            toggleDirection();
+            return;
+        }
+
+        //Rotate ship in place
+        const existing = getShipAt(coord);
+        if (!existing) return true;
+
+        placements = placements.filter((p) => p !== existing);
+        const rotated: ShipPlacement = {
+            ...existing,
+            direction: existing.direction === 'horizontal' ? 'vertical' : 'horizontal'
+        };
+        const cells = getShipCells(rotated.ship_type, rotated.start, rotated.direction);
+        if (isValidPlacement(cells)) {
+            placements.push(rotated);
+        } else {
+            placements.push(existing);
+        }
+    }
 </script>
+
+<svelte:window
+    onkeydown={(e) => {
+        if (e.key.toLowerCase() === 'r') toggleDirection();
+    }}
+/>
 
 <div class="flex flex-col items-center gap-6">
     <h2 class="text-xl font-semibold">Place your fleet</h2>
