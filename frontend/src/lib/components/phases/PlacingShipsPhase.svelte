@@ -1,21 +1,53 @@
 <script lang="ts">
-    import { sendWS } from "$lib/api/websocket";
-    import { gameStore } from "$lib/stores/game";
-    import Board from "$lib/components/Board.svelte";
-	import type { 
+    import { sendWS } from '$lib/api/websocket';
+    import { gameStore } from '$lib/stores/game';
+    import Board from '$lib/components/Board.svelte';
+    import { BOARD_SIZE, SHIP_LENGTHS, TOTAL_SHIPS } from '$lib/game/config';
+    import type {
         ClientMessage,
         ShipPlacement,
-        BoardView, 
-		CellView
+        BoardView,
+        ShipType,
+        Coord,
+        PreviewBoard,
+        PreviewCell,
+        Direction
+    } from '$lib/types';
 
-    } from "$lib/types";
+    let placements = $state<ShipPlacement[]>([]);
 
-    const EMPTY_CELL: CellView = { type: 'empty'};
+    const previewBoard: PreviewBoard = $derived.by(() => {
+        // Create empty grid
+        const { cells } = createEmptyBoard();
 
-    function createEmptyBoard(): BoardView {
+        // Place existing ships
+        for (const ship of placements) {
+            for (const cell of getShipCells(ship.ship_type, ship.start, ship.direction)) {
+                cells[cell.row][cell.col] = { type: 'placed', ship_type: ship.ship_type };
+            }
+        }
+        return { cells };
+    });
+
+    function createEmptyBoard(): PreviewBoard {
         return {
-            cells: Array.from({ length: 10}, () => Array.from({ length: 10 }, () => EMPTY_CELL))
+            cells: Array.from({ length: BOARD_SIZE }, () =>
+                Array.from({ length: BOARD_SIZE }, () => ({ type: 'empty' }))
+            )
         };
+    }
+
+    function getShipCells(ship: ShipType, start: Coord, direction: Direction): Coord[] {
+        const length = SHIP_LENGTHS[ship];
+        const cells: Coord[] = [];
+
+        for (let i = 0; i < length; i++) {
+            const row = direction === 'vertical' ? start.row + i : start.row;
+            const col = direction === 'horizontal' ? start.col + i : start.col;
+
+            cells.push({ row, col });
+        }
+        return cells;
     }
 
     function applyPreviewFleet(fleet: ShipPlacement[] | null) {
@@ -23,19 +55,11 @@
 
         if (!fleet) return board;
 
-        const lengthMap = {
-            carrier: 5,
-            battleship: 4,
-            destroyer: 3,
-            submarine: 3,
-            patrolboat: 2
-        };
-
         for (const ship of fleet) {
             const { ship_type, start, direction } = ship;
-            const length = lengthMap[ship_type];
+            const length = SHIP_LENGTHS[ship_type];
 
-            for (let i=0; i < length; i++) {
+            for (let i = 0; i < length; i++) {
                 const row = direction === 'vertical' ? start.row + i : start.row;
                 const col = direction === 'horizontal' ? start.col + i : start.col;
 
