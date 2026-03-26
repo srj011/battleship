@@ -1,11 +1,13 @@
 export type ShipType = 'carrier' | 'battleship' | 'destroyer' | 'submarine' | 'patrolboat';
 
-export type CellView = 
+export type Direction = 'horizontal' | 'vertical';
+
+export type CellView =
     | { type: 'unknown' }
     | { type: 'empty' }
     | { type: 'hit' }
     | { type: 'miss' }
-    | { type: 'ship'; ship_type: ShipType }
+    | { type: 'ship'; ship_type: ShipType };
 
 export type BoardView = {
 	cells: CellView[][];
@@ -92,8 +94,14 @@ export type FireMessage = {
 	coord: Coord;
 };
 
-export type ClientMessage = 
-    | RandomFleetMessage
-    | PlaceFleetMessage
-    | FireMessage;
-    
+export type ClientMessage = RandomFleetMessage | PlaceFleetMessage | FireMessage;
+
+export type PreviewCell =
+    | { type: 'empty' }
+    | { type: 'placed'; ship_type: ShipType }
+    | { type: 'preview-valid'; ship_type: ShipType }
+    | { type: 'preview-invalid'; ship_type: ShipType };
+
+export type PreviewBoard = {
+    cells: PreviewCell[][];
+};
