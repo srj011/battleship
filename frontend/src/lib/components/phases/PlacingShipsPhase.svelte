@@ -50,6 +50,26 @@
         return cells;
     }
 
+    function isValidPlacement(cells: Coord[]): boolean {
+        // Bounds check
+        for (const cell of cells) {
+            if (cell.row < 0 || cell.col < 0 || cell.row >= BOARD_SIZE || cell.col >= BOARD_SIZE) {
+                return false;
+            }
+        }
+
+        // Overlap check
+        for (const ship of placements) {
+            const existing = getShipCells(ship.ship_type, ship.start, ship.direction);
+            for (const cell of cells) {
+                if (existing.some((e) => e.row == cell.row && e.col == cell.col)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     function applyPreviewFleet(fleet: ShipPlacement[] | null) {
         const board = createEmptyBoard();
 
