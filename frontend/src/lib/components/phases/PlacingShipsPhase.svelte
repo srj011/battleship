@@ -14,7 +14,9 @@
         Direction
     } from '$lib/types';
 
+    let activeShip = $state<ShipPlacement | null>(null);
     let placements = $state<ShipPlacement[]>([]);
+    let hoverCoord = $state<Coord | null>(null);
 
     const previewBoard: PreviewBoard = $derived.by(() => {
         // Create empty grid
@@ -26,8 +28,30 @@
                 cells[cell.row][cell.col] = { type: 'placed', ship_type: ship.ship_type };
             }
         }
+
+        // Add preview
+        if (activeShip && hoverCoord) {
+            const shipCells = getShipCells(activeShip.ship_type, hoverCoord, activeShip.direction);
+            const valid = isValidPlacement(shipCells);
+
+            for (const cell of shipCells) {
+                if (
+                    cell.row < 0 ||
+                    cell.col < 0 ||
+                    cell.row >= BOARD_SIZE ||
+                    cell.col >= BOARD_SIZE
+                )
+                    continue;
+
+                cells[cell.row][cell.col] = {
+                    type: valid ? 'preview-valid' : 'preview-invalid',
+                    ship_type: activeShip.ship_type
+                };
+            }
+        }
         return { cells };
     });
+
 
     function createEmptyBoard(): PreviewBoard {
         return {
