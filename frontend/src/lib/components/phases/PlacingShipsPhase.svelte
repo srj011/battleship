@@ -15,6 +15,7 @@
     } from '$lib/types';
 
     let activeShip = $state<ShipPlacement | null>(null);
+    let committedShip = $state<ShipPlacement | null>(null);
     let placements = $state<ShipPlacement[]>([]);
     let hoverCoord = $state<Coord | null>(null);
 
@@ -59,6 +60,14 @@
                 Array.from({ length: BOARD_SIZE }, () => ({ type: 'empty' }))
             )
         };
+    }
+
+
+    function getShipAt(coord: Coord): ShipPlacement | null {
+        const cell = previewBoard.cells[coord.row][coord.col];
+        if (cell.type !== 'placed') return null;
+
+        return placements.find((p) => p.ship_type === cell.ship_type) ?? null;
     }
 
     function getShipCells(ship: ShipType, start: Coord, direction: Direction): Coord[] {
@@ -117,8 +126,6 @@
         return board;
     }
 
-    const previewBoard = $derived(applyPreviewFleet($gameStore.previewFleet));
-
     function generateRandomFleet() {
         let msg: ClientMessage = { type: 'random_fleet'};
         sendWS(msg);
@@ -132,6 +139,34 @@
             fleet: $gameStore.previewFleet
         };
         sendWS(msg);
+    }
+
+    function handleClick(coord: Coord) {
+        const existing = getShipAt(coord);
+
+        if (existing) {
+            if (activeShip && committedShip) {
+                placements.push(committedShip);
+            }
+
+            placements = placements.filter((p) => p !== existing);
+            activeShip = { ...existing };
+            committedShip = existing;
+            return;
+        }
+
+        if (!activeShip) return;
+
+        const cells = getShipCells(activeShip.ship_type, coord, activeShip.direction);
+        if (!isValidPlacement(cells)) return;
+
+        placements.push({
+            ...activeShip,
+            start: coord
+        });
+
+        activeShip = null;
+        committedShip = null;
     }
 </script>
 
