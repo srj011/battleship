@@ -35,8 +35,8 @@ export function connectWS(code: string, token: string) {
                 console.log(msg.event);
                 break;
 
-            case "random_fleet":
-                gameStore.setPreviewFleet(msg.fleet);
+            case 'random_fleet':
+                gameStore.setRandomFleet(msg.fleet);
                 break;
 
             case "error":

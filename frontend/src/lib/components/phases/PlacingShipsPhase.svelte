@@ -13,6 +13,7 @@
         PreviewCell,
         Direction
     } from '$lib/types';
+    import { onMount } from 'svelte';
 
     let activeShip = $state<ShipPlacement | null>(null);
     let committedShip = $state<ShipPlacement | null>(null);
@@ -53,6 +54,18 @@
         return { cells };
     });
 
+    onMount(() => {
+        const msg: ClientMessage = { type: 'random_fleet' };
+        sendWS(msg);
+    });
+
+    $effect(() => {
+        if (!$gameStore.randomFleet) return;
+
+        placements = $gameStore.randomFleet;
+        activeShip = null;
+        committedShip = null;
+    });
 
     function createEmptyBoard(): PreviewBoard {
         return {
@@ -131,16 +144,16 @@
     }
 
     function generateRandomFleet() {
-        let msg: ClientMessage = { type: 'random_fleet'};
+        const msg: ClientMessage = { type: 'random_fleet' };
         sendWS(msg);
     }
 
     function placeFleet() {
-        if (!$gameStore.previewFleet) return;
+        if (placements.length !== TOTAL_SHIPS) return;
 
-        let msg: ClientMessage = {
+        const msg: ClientMessage = {
             type: 'place_fleet',
-            fleet: $gameStore.previewFleet
+            fleet: placements
         };
         sendWS(msg);
     }
