@@ -214,11 +214,9 @@ impl GameSession {
             let coord = ai.next_shot();
             let event = self.fire_once(Turn::Player2, coord)?;
 
-            if event.outcome.result == ShotResult::AlreadyShot {
-                panic!("AI fired at an already-shot cell {coord:?}");
-            }
+            debug_assert!(event.outcome.result != ShotResult::AlreadyShot);
 
-            ai.process_result(coord, event.outcome.result);
+            ai.process_result(coord, &event.outcome);
 
             if event.outcome.result == ShotResult::Miss {
                 break;
