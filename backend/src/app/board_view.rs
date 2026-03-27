@@ -12,6 +12,7 @@ pub enum CellView {
     Ship { ship_type: ShipType },
     Hit,
     Miss,
+    Blocked,
 }
 
 pub enum BoardPerspective {
@@ -42,6 +43,7 @@ impl BoardView {
                     },
                     Cell::Hit(_) => CellView::Hit,
                     Cell::Miss => CellView::Miss,
+                    Cell::Blocked => CellView::Blocked,
                 };
             }
         }
