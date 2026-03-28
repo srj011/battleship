@@ -33,18 +33,16 @@
 
         // Add preview
         if (activeShip && hoverCoord) {
-            const shipCells = getShipCells(activeShip.ship_type, hoverCoord, activeShip.direction);
+            const clampedStart = clampStart(activeShip.ship_type, hoverCoord, activeShip.direction);
+
+            const shipCells = getShipCells(
+                activeShip.ship_type,
+                clampedStart,
+                activeShip.direction
+            );
             const valid = isValidPlacement(shipCells);
 
             for (const cell of shipCells) {
-                if (
-                    cell.row < 0 ||
-                    cell.col < 0 ||
-                    cell.row >= BOARD_SIZE ||
-                    cell.col >= BOARD_SIZE
-                )
-                    continue;
-
                 cells[cell.row][cell.col] = {
                     type: valid ? 'preview-valid' : 'preview-invalid',
                     ship_type: activeShip.ship_type
@@ -120,27 +118,20 @@
         return true;
     }
 
-    function applyPreviewFleet(fleet: ShipPlacement[] | null) {
-        const board = createEmptyBoard();
+    function clampStart(ship: ShipType, start: Coord, direction: Direction): Coord {
+        const length = SHIP_LENGTHS[ship];
 
-        if (!fleet) return board;
-
-        for (const ship of fleet) {
-            const { ship_type, start, direction } = ship;
-            const length = SHIP_LENGTHS[ship_type];
-
-            for (let i = 0; i < length; i++) {
-                const row = direction === 'vertical' ? start.row + i : start.row;
-                const col = direction === 'horizontal' ? start.col + i : start.col;
-
-                board.cells[row][col] = {
-                    type: 'ship',
-                    ship_type
-                };
-            }
-
+        if (direction === 'horizontal') {
+            return {
+                row: start.row,
+                col: Math.min(start.col, BOARD_SIZE - length)
+            };
+        } else {
+            return {
+                row: Math.min(start.row, BOARD_SIZE - length),
+                col: start.col
+            };
         }
-        return board;
     }
 
     function generateRandomFleet() {
@@ -178,12 +169,13 @@
 
         if (!activeShip) return;
 
-        const cells = getShipCells(activeShip.ship_type, coord, activeShip.direction);
+        const clampedStart = clampStart(activeShip.ship_type, coord, activeShip.direction);
+        const cells = getShipCells(activeShip.ship_type, clampedStart, activeShip.direction);
         if (!isValidPlacement(cells)) return;
 
         placements.push({
             ...activeShip,
-            start: coord
+            start: clampedStart
         });
 
         activeShip = null;
@@ -202,15 +194,18 @@
         if (!existing) return true;
 
         placements = placements.filter((p) => p !== existing);
+
         const rotated: ShipPlacement = {
             ...existing,
             direction: existing.direction === 'horizontal' ? 'vertical' : 'horizontal'
         };
         const cells = getShipCells(rotated.ship_type, rotated.start, rotated.direction);
+
         if (isValidPlacement(cells)) {
             placements.push(rotated);
         } else {
-            placements.push(existing);
+            activeShip = rotated;
+            committedShip = existing;
         }
     }
 
