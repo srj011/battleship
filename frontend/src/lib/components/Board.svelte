@@ -41,6 +41,8 @@
             case 'hit':
                 return 'bg-red-500';
             case 'miss':
+                return 'bg-gray-400/75';
+            case 'blocked':
                 return 'bg-gray-400';
             // Preview cells
             case 'placed':

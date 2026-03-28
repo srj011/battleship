@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
     import { sendWS } from '$lib/api/websocket';
     import { gameStore } from '$lib/stores/game';
     import Board from '$lib/components/Board.svelte';
@@ -13,7 +14,7 @@
         Direction,
         CellView
     } from '$lib/types';
-    import { onMount } from 'svelte';
+    import { isWithinBounds } from '$lib/game/utils';
 
     let activeShip = $state<ShipPlacement | null>(null);
     let committedShip = $state<ShipPlacement | null>(null);
@@ -28,6 +29,23 @@
         for (const ship of placements) {
             for (const cell of getShipCells(ship.ship_type, ship.start, ship.direction)) {
                 cells[cell.row][cell.col] = { type: 'placed', ship_type: ship.ship_type };
+
+                // Mark surrounding cells as blocked
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        const row = cell.row + dr;
+                        const col = cell.col + dc;
+
+                        if (!isWithinBounds({ row, col })) {
+                            continue;
+                        }
+
+                        if (cells[row][col].type === 'placed') continue;
+                        if (cells[row][col].type === 'blocked') continue;
+
+                        cells[row][col] = { type: 'blocked' };
+                    }
+                }
             }
         }
 
@@ -75,7 +93,7 @@
 
     function toggleDirection() {
         if (!activeShip) return;
-        activeShip.direction = activeShip?.direction === 'horizontal' ? 'vertical' : 'horizontal';
+        activeShip.direction = activeShip.direction === 'horizontal' ? 'vertical' : 'horizontal';
     }
 
     function getShipAt(coord: Coord): ShipPlacement | null {
@@ -99,22 +117,24 @@
     }
 
     function isValidPlacement(cells: Coord[]): boolean {
-        // Bounds check
         for (const cell of cells) {
-            if (cell.row < 0 || cell.col < 0 || cell.row >= BOARD_SIZE || cell.col >= BOARD_SIZE) {
-                return false;
-            }
-        }
+            // Bounds check
+            if (!isWithinBounds(cell)) return false;
 
-        // Overlap check
-        for (const ship of placements) {
-            const existing = getShipCells(ship.ship_type, ship.start, ship.direction);
-            for (const cell of cells) {
-                if (existing.some((e) => e.row == cell.row && e.col == cell.col)) {
-                    return false;
+            // Overlap and blocked check
+            for (const ship of placements) {
+                const existing = getShipCells(ship.ship_type, ship.start, ship.direction);
+                for (const e of existing) {
+                    const dr = Math.abs(cell.row - e.row);
+                    const dc = Math.abs(cell.col - e.col);
+
+                    if (dr <= 1 && dc <= 1) {
+                        return false;
+                    }
                 }
             }
         }
+
         return true;
     }
 

@@ -7,6 +7,7 @@ export type CellView =
     | { type: 'empty' }
     | { type: 'hit' }
     | { type: 'miss' }
+    | { type: 'blocked' }
     | { type: 'ship'; ship_type: ShipType };
 
 export type BoardView = {
@@ -98,6 +99,7 @@ export type ClientMessage = RandomFleetMessage | PlaceFleetMessage | FireMessage
 
 export type PreviewCell =
     | { type: 'empty' }
+    | { type: 'blocked' }
     | { type: 'placed'; ship_type: ShipType }
     | { type: 'preview-valid'; ship_type: ShipType }
     | { type: 'preview-invalid'; ship_type: ShipType };
