@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::coord::Coord;
 use super::errors::GameError;
-use super::player::{Player, ShotResult};
+use super::player::{Player, ShotOutcome, ShotResult};
 use super::ship::ShipPlacement;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -103,7 +103,7 @@ impl GameState {
         Ok(())
     }
 
-    pub fn take_turn(&mut self, coord: Coord) -> Result<ShotResult, GameError> {
+    pub fn take_turn(&mut self, coord: Coord) -> Result<ShotOutcome, GameError> {
         if let GameStatus::Finished { winner: _ } = self.status {
             return Err(GameError::GameAlreadyFinished);
         }
@@ -129,7 +129,7 @@ impl GameState {
             return Ok(result);
         }
 
-        if matches!(result, ShotResult::Miss) {
+        if matches!(result.result, ShotResult::Miss) {
             self.switch_turn();
         }
 

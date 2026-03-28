@@ -10,6 +10,7 @@ pub enum Cell {
     Ship(ShipType),
     Hit(ShipType),
     Miss,
+    Blocked,
 }
 
 pub struct Board {
@@ -119,7 +120,13 @@ impl Board {
                 FireOutcome::Hit(ship_type)
             }
 
-            Cell::Hit(_) | Cell::Miss => FireOutcome::AlreadyShot,
+            Cell::Hit(_) | Cell::Miss | Cell::Blocked => FireOutcome::AlreadyShot,
+        }
+    }
+
+    pub fn mark_blocked(&mut self, coord: Coord) {
+        if let Cell::Empty = self.get_cell(coord) {
+            self.grid[coord.row()][coord.col()] = Cell::Blocked;
         }
     }
 }

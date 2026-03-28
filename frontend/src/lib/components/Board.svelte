@@ -1,37 +1,59 @@
 <script lang="ts">
-    import type { BoardView as BoardType, CellView, Coord } from "$lib/types";
+    import type {
+        BoardView,
+        CellView,
+        Coord,
+        PreviewBoard,
+        PreviewCell,
+        ShipType
+    } from '$lib/types';
 
     const COL_LABELS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
 
-    let { board, clickable=false, onCellClick } = $props<{
-        board: BoardType;
+    const {
+        board,
+        clickable = false,
+        onCellClick,
+        onRightClick,
+        onCellHover,
+        isCellClickable
+    } = $props<{
+        board: BoardView | PreviewBoard;
         clickable?: boolean;
-        onCellClick?: (args: {coord: Coord}) => void;
+        onCellClick?: (coord: Coord) => void;
+        onRightClick?: (coord: Coord) => void;
+        onCellHover?: (coord: Coord) => void;
+        isCellClickable?: (cell: CellView | PreviewCell) => boolean;
     }>();
 
-    function handleClick(args: {coord: Coord}) {
+    function handleClick(coord: Coord) {
         if (!clickable || !onCellClick) return;
-        onCellClick(args);
+        onCellClick(coord);
     }
 
-    function getCellClass(cell: CellView) {
+    function getCellColor(cell: CellView | PreviewCell) {
         switch (cell.type) {
             case 'unknown':
-                return "bg-sky-100";
             case 'empty':
-                return "bg-sky-100";
+                return 'bg-sky-100';
             case 'ship':
-                return "bg-indigo-500";
+                return 'bg-indigo-500/90';
             case 'hit':
-                return "bg-red-500";
+                return 'bg-red-500';
             case 'miss':
-                return "bg-gray-400";
+                return 'bg-gray-400/75';
+            case 'blocked':
+                return 'bg-gray-400';
+            // Preview cells
+            case 'placed':
+                return 'bg-indigo-500/90';
+            case 'preview-valid':
+                return 'bg-green-400';
+            case 'preview-invalid':
+                return 'bg-red-400';
         }
     }
 
-    function isCellClickable(cell: CellView) {
-        return cell.type === 'unknown';
-    }
 </script>
 
 <div class="grid grid-cols-[auto_repeat(10,2.5rem)] items-center">
@@ -54,12 +76,16 @@
                 clickable && isCellClickable(cell)
                 ? "cursor-pointer"
                 : ""
-            } ${getCellClass(cell)}`}
+            } ${getCellColor(cell)}`}
             disabled={!clickable || !isCellClickable(cell)}
             aria-label={`Cell ${rowIndex}, ${colIndex} - ${cell.type}`}
-            onclick={() => handleClick({
-                coord: {row: rowIndex, col: colIndex}
-            })}></button>
+                onclick={() => handleClick({ row: rowIndex, col: colIndex })}
+                oncontextmenu={(e) => {
+                    e.preventDefault();
+                    onRightClick?.({ row: rowIndex, col: colIndex });
+                }}
+                onmouseenter={() => onCellHover?.({ row: rowIndex, col: colIndex })}
+            ></button>
         {/each}
     {/each}
 </div>

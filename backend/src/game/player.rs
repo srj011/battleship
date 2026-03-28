@@ -2,10 +2,31 @@ use rand::prelude::*;
 use serde::Serialize;
 use std::collections::HashSet;
 
-use super::board::{BOARD_SIZE, Board, Cell, FireOutcome};
+use super::board::{BOARD_SIZE, Board, Cell, FireOutcome, within_bounds};
 use super::coord::Coord;
 use super::errors::PlacementError;
 use super::ship::{Direction, FLEET, Ship, ShipPlacement, ShipType};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ShotResult {
+    Hit,
+    Miss,
+    Sunk,
+    AlreadyShot,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ShotOutcome {
+    pub result: ShotResult,
+    pub blocked: Vec<Coord>,
+}
+
+impl ShotOutcome {
+    pub fn new(result: ShotResult, blocked: Vec<Coord>) -> Self {
+        Self { result, blocked }
+    }
+}
 
 pub struct Player {
     board: Board,
@@ -91,35 +112,28 @@ impl Player {
             .expect("Ship not found")
     }
 
-    pub fn fire_at(&mut self, coord: Coord) -> ShotResult {
+    pub fn fire_at(&mut self, coord: Coord) -> ShotOutcome {
         match self.board.fire_at(coord) {
-            FireOutcome::Miss => ShotResult::Miss,
-            FireOutcome::AlreadyShot => ShotResult::AlreadyShot,
-
+            FireOutcome::Miss => ShotOutcome::new(ShotResult::Miss, Vec::new()),
+            FireOutcome::AlreadyShot => ShotOutcome::new(ShotResult::AlreadyShot, Vec::new()),
             FireOutcome::Hit(ship_type) => {
-                let ship = self.get_ship_mut(ship_type);
-                ship.register_hit();
+                let sunk_positions = {
+                    let ship = self.get_ship_mut(ship_type);
+                    ship.register_hit();
 
-                if ship.is_sunk() {
-                    ShotResult::Sunk
+                    if ship.is_sunk() {
+                        Some(ship.positions().clone())
+                    } else {
+                        None
+                    }
+                };
+
+                if let Some(positions) = sunk_positions {
+                    let blocked = self.mark_adjacent_as_blocked(&positions);
+                    ShotOutcome::new(ShotResult::Sunk, blocked)
                 } else {
-                    ShotResult::Hit
+                    ShotOutcome::new(ShotResult::Hit, Vec::new())
                 }
-            }
-        }
-    }
-
-    pub fn random_shot(&self) -> Coord {
-        let mut rng = rand::rng();
-
-        loop {
-            let row = rng.random_range(0..BOARD_SIZE);
-            let col = rng.random_range(0..BOARD_SIZE);
-            let coord = Coord::new(row, col);
-
-            match self.board.get_cell(coord) {
-                Cell::Hit(_) | Cell::Miss => continue,
-                _ => return coord,
             }
         }
     }
@@ -127,13 +141,24 @@ impl Player {
     pub fn has_lost(&self) -> bool {
         self.ships.iter().all(|ship| ship.is_sunk())
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum ShotResult {
-    Hit,
-    Miss,
-    Sunk,
-    AlreadyShot,
+    pub fn mark_adjacent_as_blocked(&mut self, positions: &[Coord]) -> Vec<Coord> {
+        let mut blocked: Vec<Coord> = Vec::new();
+        for &coord in positions {
+            for dr in -1..=1 {
+                for dc in -1..=1 {
+                    if let Some(adj) = coord.offset(dr, dc) {
+                        if !within_bounds(adj) {
+                            continue;
+                        }
+                        if let Cell::Empty = self.board.get_cell(adj) {
+                            self.board.mark_blocked(adj);
+                            blocked.push(adj);
+                        }
+                    }
+                }
+            }
+        }
+        blocked
+    }
 }

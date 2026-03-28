@@ -7,22 +7,22 @@ use crate::game::ai::AiPlayer;
 use crate::game::coord::Coord;
 use crate::game::errors::GameError;
 use crate::game::game_state::{GameState, GameStatus, Turn};
-use crate::game::player::{Player, ShotResult};
+use crate::game::player::{Player, ShotOutcome, ShotResult};
 use crate::game::ship::ShipPlacement;
 
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct TurnEvent {
     player: Turn,
     coord: Coord,
-    result: ShotResult,
+    outcome: ShotOutcome,
 }
 
 impl TurnEvent {
-    pub fn new(player: Turn, coord: Coord, result: ShotResult) -> Self {
+    pub fn new(player: Turn, coord: Coord, outcome: ShotOutcome) -> Self {
         Self {
             player,
             coord,
-            result,
+            outcome,
         }
     }
 }
@@ -42,14 +42,7 @@ pub struct GameSnapshot {
     pub opponent_board: BoardView,
 }
 
-/*#[derive(Debug, Clone, Copy, Serialize)]
-pub struct GameUpdate {
-    pub event: TurnEvent,
-    pub turn: Turn,
-    pub status: GameStatus,
-}*/
-
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum GameUpdate {
     StateChanged,
     ShotFired { event: TurnEvent },
@@ -205,7 +198,9 @@ impl GameSession {
 
         let event = self.record_turn(acting_player, coord)?;
 
-        let _ = self.tx.send(GameUpdate::ShotFired { event });
+        let _ = self.tx.send(GameUpdate::ShotFired {
+            event: event.clone(),
+        });
         Ok(event)
     }
 
@@ -219,13 +214,11 @@ impl GameSession {
             let coord = ai.next_shot();
             let event = self.fire_once(Turn::Player2, coord)?;
 
-            if event.result == ShotResult::AlreadyShot {
-                panic!("AI fired at an already-shot cell {coord:?}");
-            }
+            debug_assert!(event.outcome.result != ShotResult::AlreadyShot);
 
-            ai.process_result(coord, event.result);
+            ai.process_result(coord, &event.outcome);
 
-            if event.result == ShotResult::Miss {
+            if event.outcome.result == ShotResult::Miss {
                 break;
             }
         }
@@ -235,8 +228,9 @@ impl GameSession {
     }
 
     fn record_turn(&mut self, player: Turn, coord: Coord) -> Result<TurnEvent, GameError> {
-        let event = TurnEvent::new(player, coord, self.game.take_turn(coord)?);
-        self.history.push(event);
+        let outcome = self.game.take_turn(coord)?;
+        let event = TurnEvent::new(player, coord, outcome);
+        self.history.push(event.clone());
 
         Ok(event)
     }

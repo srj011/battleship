@@ -1,12 +1,19 @@
 use rand::{prelude::*, rng};
-use std::collections::HashSet;
 
 use super::board::{BOARD_SIZE, within_bounds};
 use super::coord::Coord;
-use super::player::ShotResult;
+use super::player::{ShotOutcome, ShotResult};
+
+#[derive(Debug, Clone, Copy)]
+pub enum AiCell {
+    Unknown,
+    Hit,
+    Miss,
+    Blocked,
+}
 
 pub struct AiPlayer {
-    shots_taken: HashSet<Coord>,
+    opponent_view: [[AiCell; BOARD_SIZE]; BOARD_SIZE],
     adjacent_targets: Vec<Coord>,
     current_hits: Vec<Coord>,
 }
@@ -14,7 +21,7 @@ pub struct AiPlayer {
 impl AiPlayer {
     pub fn new() -> Self {
         Self {
-            shots_taken: HashSet::new(),
+            opponent_view: [[AiCell::Unknown; BOARD_SIZE]; BOARD_SIZE],
             adjacent_targets: Vec::new(),
             current_hits: Vec::new(),
         }
@@ -24,14 +31,12 @@ impl AiPlayer {
         // Target mode
         // After second and subsequent hits -> Follow orientation(target mode)
         if let Some(target) = self.target_mode_shot() {
-            self.shots_taken.insert(target);
             return target;
         }
 
         // After first hit -> Find orientation of ship
         while let Some(target) = self.adjacent_targets.pop() {
-            if !self.shots_taken.contains(&target) {
-                self.shots_taken.insert(target);
+            if self.is_valid_target(target) {
                 return target;
             }
         }
@@ -49,18 +54,30 @@ impl AiPlayer {
 
             let coord = Coord::new(row, col);
 
-            if !self.shots_taken.contains(&coord) {
-                self.shots_taken.insert(coord);
+            if self.is_valid_target(coord) {
                 return coord;
             }
         }
     }
 
-    pub fn process_result(&mut self, coord: Coord, result: ShotResult) {
-        match result {
-            ShotResult::Hit => self.handle_hit(coord),
-            ShotResult::Sunk => self.reset_targets(),
-            _ => {}
+    pub fn process_result(&mut self, coord: Coord, outcome: &ShotOutcome) {
+        match outcome.result {
+            ShotResult::Hit => {
+                self.opponent_view[coord.row()][coord.col()] = AiCell::Hit;
+                self.handle_hit(coord);
+            }
+            ShotResult::Sunk => {
+                self.opponent_view[coord.row()][coord.col()] = AiCell::Hit;
+                self.reset_targets();
+            }
+            ShotResult::Miss => {
+                self.opponent_view[coord.row()][coord.col()] = AiCell::Miss;
+            }
+            ShotResult::AlreadyShot => {}
+        }
+
+        for &blocked_coord in &outcome.blocked {
+            self.opponent_view[blocked_coord.row()][blocked_coord.col()] = AiCell::Blocked;
         }
     }
 
@@ -140,7 +157,13 @@ impl AiPlayer {
 
     // Utility methods
     fn is_valid_target(&self, coord: Coord) -> bool {
-        within_bounds(coord) && !self.shots_taken.contains(&coord)
+        if !within_bounds(coord) {
+            return false;
+        };
+        matches!(
+            self.opponent_view[coord.row()][coord.col()],
+            AiCell::Unknown
+        )
     }
 
     fn reset_targets(&mut self) {
