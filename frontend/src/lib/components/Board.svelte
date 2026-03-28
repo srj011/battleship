@@ -54,6 +54,47 @@
         }
     }
 
+    function getShipBorders(cells: (CellView | PreviewCell)[][], coord: Coord): string {
+        const cell = cells[coord.row][coord.col];
+        const ship = getShipType(cell);
+
+        if (!ship) return '';
+
+        const directions = [
+            { dr: -1, dc: 0, cls: 'border-t-2' },
+            { dr: 1, dc: 0, cls: 'border-b-2' },
+            { dr: 0, dc: -1, cls: 'border-l-2' },
+            { dr: 0, dc: 1, cls: 'border-r-2' }
+        ];
+        let classes = '';
+        const { row, col } = coord;
+
+        for (const { dr, dc, cls } of directions) {
+            const nr = row + dr;
+            const nc = col + dc;
+
+            const adj_cell = cells[nr]?.[nc];
+            const adj_ship = adj_cell ? getShipType(adj_cell) : null;
+
+            if (!adj_ship || adj_ship !== ship) {
+                classes += ` ${cls} border-indigo-600`;
+            }
+        }
+        return classes;
+    }
+
+    function getGridBorder(cell: CellView | PreviewCell): string {
+        const ship = getShipType(cell);
+
+        if (ship) return '';
+
+        return 'border border-sky-950/30';
+    }
+
+    function getShipType(cell: CellView | PreviewCell): ShipType | null {
+        if ('ship_type' in cell) return cell.ship_type;
+        return null;
+    }
 </script>
 
 <div class="grid grid-cols-[auto_repeat(10,2.5rem)] items-center">
@@ -70,13 +111,14 @@
 
         {#each row as cell, colIndex (`${rowIndex}-${colIndex}`)}
             <button
-            class={`w-10 h-10 border border-sky-950/50 ${
-                clickable && isCellClickable(cell)
-                ? "cursor-pointer"
-                : ""
-            } ${getCellColor(cell)}`}
-            disabled={!clickable || !isCellClickable(cell)}
-            aria-label={`Cell ${rowIndex}, ${colIndex} - ${cell.type}`}
+                class={`h-10 w-10 focus:outline-none
+                    ${getCellColor(cell)}
+                    ${getGridBorder(cell)}
+                    ${getShipBorders(board.cells, { row: rowIndex, col: colIndex })}
+                    ${clickable && isCellClickable(cell) ? 'cursor-pointer' : ''}
+                `}
+                disabled={!clickable || !isCellClickable(cell)}
+                aria-label={`Cell ${rowIndex}, ${colIndex} - ${cell.type}`}
                 onclick={() => handleClick({ row: rowIndex, col: colIndex })}
                 oncontextmenu={(e) => {
                     e.preventDefault();
