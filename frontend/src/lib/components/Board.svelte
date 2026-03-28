@@ -8,7 +8,7 @@
         ShipType
     } from '$lib/types';
 
-    const COL_LABELS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+    const COL_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 
     const {
         board,
@@ -57,18 +57,16 @@
 </script>
 
 <div class="grid grid-cols-[auto_repeat(10,2.5rem)] items-center">
-
     <!-- Empty left corner space -->
     <div></div>
 
     <!-- Column Label -->
     {#each COL_LABELS as label (label)}
-        <div class="text-xs text-center mb-2">{label}</div>
+        <div class="mb-2 text-center text-xs">{label}</div>
     {/each}
     {#each board.cells as row, rowIndex (rowIndex)}
-
-    <!-- Row Label -->
-    <div class="text-xs text-center mr-2">{rowIndex + 1}</div>
+        <!-- Row Label -->
+        <div class="mr-2 text-center text-xs">{rowIndex + 1}</div>
 
         {#each row as cell, colIndex (`${rowIndex}-${colIndex}`)}
             <button

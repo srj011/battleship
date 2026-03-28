@@ -1,9 +1,9 @@
-const BASE_URL = "http://localhost:3000/api/v1";
+const BASE_URL = 'http://localhost:3000/api/v1';
 
-export async function createGame(mode: "ai" | "multiplayer") {
+export async function createGame(mode: 'ai' | 'multiplayer') {
     const res = await fetch(`${BASE_URL}/game`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode })
     });
 
@@ -12,7 +12,7 @@ export async function createGame(mode: "ai" | "multiplayer") {
 
 export async function joinGame(code: string) {
     const res = await fetch(`${BASE_URL}/game/${code}/join`, {
-        method: "POST"
+        method: 'POST'
     });
 
     return res.json();

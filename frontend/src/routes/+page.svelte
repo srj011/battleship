@@ -1,8 +1,8 @@
 <script lang="ts">
-    import { createGame, joinGame } from "$lib/api/client";
-    import { goto } from "$app/navigation";
+    import { createGame, joinGame } from '$lib/api/client';
+    import { goto } from '$app/navigation';
 
-    let game_code = $state("");
+    let game_code = $state('');
     let loading = $state(false);
 
     async function handleCreate(mode: 'ai' | 'multiplayer') {
@@ -25,28 +25,25 @@
     }
 </script>
 
-<div class="min-h-screen flex flex-col items-center justify-center gap-6">
+<div class="flex min-h-screen flex-col items-center justify-center gap-6">
     <h1 class="text-4xl font-bold">Battleship</h1>
 
     <div class="flex gap-4">
-        <button onclick={() => handleCreate("ai")} disabled={loading} style:cursor="pointer">
+        <button onclick={() => handleCreate('ai')} disabled={loading} style:cursor="pointer">
             Play vs AI
         </button>
-        <button onclick={() => handleCreate("multiplayer")} disabled={loading} style:cursor="pointer">
+        <button
+            onclick={() => handleCreate('multiplayer')}
+            disabled={loading}
+            style:cursor="pointer"
+        >
             Create Multiplayer
         </button>
     </div>
 
     <div class="flex gap-2">
-        <input
-        bind:value={game_code}
-        placeholder="Enter game code"
-        class="border px-3 py-2"
-        />
+        <input bind:value={game_code} placeholder="Enter game code" class="border px-3 py-2" />
 
-        <button onclick={handleJoin} disabled={loading} style:cursor="pointer">
-            Join
-        </button>
+        <button onclick={handleJoin} disabled={loading} style:cursor="pointer"> Join </button>
     </div>
 </div>
-

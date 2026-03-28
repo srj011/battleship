@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { sendWS } from '$lib/api/websocket';
-	import { gameStore } from '$lib/stores/game';
+    import { sendWS } from '$lib/api/websocket';
+    import { gameStore } from '$lib/stores/game';
     import Board from '$lib/components/Board.svelte';
     import type { CellView, Coord, FireMessage, PreviewCell } from '$lib/types';
 
     const isMyTurn = $derived(
-        $gameStore.game?.status.type === "ongoing" &&
-        $gameStore.player !== null &&
-        $gameStore.player === $gameStore.game.turn
+        $gameStore.game?.status.type === 'ongoing' &&
+            $gameStore.player !== null &&
+            $gameStore.player === $gameStore.game.turn
     );
 
     function handleFire(coord: Coord) {
@@ -34,34 +34,27 @@
 
     {#if $gameStore.game}
         <!-- Turn Indicator -->
-        <div class={`text-lg font-semibold ${
-            isMyTurn ? "text-green-500" : "text-gray-400"
-        }`}>
-            {isMyTurn ? "Your Turn" : "Opponent's Turn"}
+        <div class={`text-lg font-semibold ${isMyTurn ? 'text-green-500' : 'text-gray-400'}`}>
+            {isMyTurn ? 'Your Turn' : "Opponent's Turn"}
         </div>
 
         <!-- Board's flexbox -->
         <div class="flex gap-16">
-
             <!-- Player's board -->
-            <div class={`p-2 rounded ${
-                isMyTurn ? "opacity-60" : ""
-            }`}>
+            <div class={`rounded p-2 ${isMyTurn ? 'opacity-60' : ''}`}>
                 <Board board={$gameStore.game.player_board} />
-                <p class="text-sm text-center my-3">Your board</p>
+                <p class="my-3 text-center text-sm">Your board</p>
             </div>
 
             <!-- Opponent's board-->
-            <div class={`p-2 rounded ${
-                !isMyTurn ? "opacity-60" : ""
-            }`}>
+            <div class={`rounded p-2 ${!isMyTurn ? 'opacity-60' : ''}`}>
                 <Board
                     board={$gameStore.game.opponent_board}
                     clickable={isMyTurn}
                     onCellClick={handleFire}
                     {isCellClickable}
                 />
-                <p class="text-sm text-center my-3">Opponent's board</p>
+                <p class="my-3 text-center text-sm">Opponent's board</p>
             </div>
         </div>
     {/if}

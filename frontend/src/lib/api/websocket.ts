@@ -1,5 +1,5 @@
-import { gameStore } from "$lib/stores/game";
-import type { ServerMessage } from "$lib/types";
+import { gameStore } from '$lib/stores/game';
+import type { ClientMessage, ServerMessage } from '$lib/types';
 
 let socket: WebSocket | null = null;
 
@@ -19,17 +19,17 @@ export function connectWS(code: string, token: string) {
         console.log(msg);
 
         switch (msg.type) {
-            case "game_state":
+            case 'game_state':
                 gameStore.setGame(msg);
                 gameStore.setPlayer(msg.player);
                 break;
 
-            case "game_update":
+            case 'game_update':
                 gameStore.setGame({
                     turn: msg.turn,
                     status: msg.status,
                     player_board: msg.player_board,
-                    opponent_board: msg.opponent_board,
+                    opponent_board: msg.opponent_board
                 });
 
                 console.log(msg.event);
@@ -39,14 +39,14 @@ export function connectWS(code: string, token: string) {
                 gameStore.setRandomFleet(msg.fleet);
                 break;
 
-            case "error":
+            case 'error':
                 console.error(msg.message);
                 break;
         }
     };
 }
 
-export function sendWS(message: any) {
+export function sendWS(message: ClientMessage) {
     socket?.send(JSON.stringify(message));
 }
 
