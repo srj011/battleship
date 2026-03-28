@@ -6,12 +6,12 @@
     import type {
         ClientMessage,
         ShipPlacement,
-        BoardView,
         ShipType,
         Coord,
         PreviewBoard,
         PreviewCell,
-        Direction
+        Direction,
+        CellView
     } from '$lib/types';
     import { onMount } from 'svelte';
 
@@ -222,7 +222,7 @@
         committedShip = null;
     }
 
-    function isCellClickable(cell: PreviewCell): boolean {
+    function isCellClickable(cell: PreviewCell | CellView): boolean {
         if (activeShip) {
             return cell.type === 'empty' || cell.type === 'preview-valid';
         } else {
@@ -250,7 +250,7 @@
             onCellClick={handleClick}
             onRightClick={handleRightClick}
             onCellHover={handleHover}
-            isCellClickable={(cell) => isCellClickable(cell as PreviewCell)}
+            {isCellClickable}
         />
     </div>
 

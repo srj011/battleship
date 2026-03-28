@@ -2,7 +2,7 @@
 	import { sendWS } from '$lib/api/websocket';
 	import { gameStore } from '$lib/stores/game';
     import Board from '$lib/components/Board.svelte';
-    import type { Coord, FireMessage } from '$lib/types';
+    import type { CellView, Coord, FireMessage, PreviewCell } from '$lib/types';
 
     const isMyTurn = $derived(
         $gameStore.game?.status.type === "ongoing" &&
@@ -10,14 +10,18 @@
         $gameStore.player === $gameStore.game.turn
     );
 
-    function handleFire(args: {coord: Coord}) {
+    function handleFire(coord: Coord) {
         if (!isMyTurn) return;
 
-        let msg: FireMessage = {
-            type: "fire",
-            coord: args.coord,
+        const msg: FireMessage = {
+            type: 'fire',
+            coord
         };
         sendWS(msg);
+    }
+
+    function isCellClickable(cell: CellView | PreviewCell): boolean {
+        return cell.type === 'empty' || cell.type === 'unknown';
     }
 </script>
 
@@ -55,6 +59,7 @@
                     board={$gameStore.game.opponent_board}
                     clickable={isMyTurn}
                     onCellClick={handleFire}
+                    {isCellClickable}
                 />
                 <p class="text-sm text-center my-3">Opponent's board</p>
             </div>
