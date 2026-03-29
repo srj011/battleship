@@ -10,7 +10,7 @@
 
         const res = await createGame(mode);
         // eslint-disable-next-line svelte/no-navigation-without-resolve
-        goto(`/game/${res.game_code}?player_token=${res.player_token}`);
+        await goto(`/game/${res.game_code}?player_token=${res.player_token}`);
     }
 
     async function handleJoin() {
@@ -21,21 +21,25 @@
         const res = await joinGame(game_code);
 
         // eslint-disable-next-line svelte/no-navigation-without-resolve
-        goto(`/game/${game_code}?player_token=${res.player_token}`);
+        await goto(`/game/${game_code}?player_token=${res.player_token}`);
     }
 </script>
 
-<div class="flex min-h-screen flex-col items-center justify-center gap-6">
+<div class="flex flex-1 flex-col items-center justify-center gap-6">
     <h1 class="text-4xl font-bold">Battleship</h1>
 
     <div class="flex gap-4">
-        <button onclick={() => handleCreate('ai')} disabled={loading} style:cursor="pointer">
+        <button
+            class="cursor-pointer px-2 py-1"
+            onclick={() => handleCreate('ai')}
+            disabled={loading}
+        >
             Play vs AI
         </button>
         <button
+            class="cursor-pointer px-2 py-1"
             onclick={() => handleCreate('multiplayer')}
             disabled={loading}
-            style:cursor="pointer"
         >
             Create Multiplayer
         </button>

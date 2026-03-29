@@ -20,9 +20,9 @@
     });
 </script>
 
-<div class="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 p-4">
+<div class="flex justify-center gap-6 p-4">
     {#if !$gameStore.connected}
-        <div class="flex min-h-screen items-center justify-center gap-3 text-black">
+        <div class="flex flex-1 items-center justify-center gap-3 text-black">
             <div class="h-2 w-2 animate-pulse rounded-full bg-black"></div>
             <p>Connecting to game...</p>
         </div>
