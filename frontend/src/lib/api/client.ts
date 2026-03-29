@@ -1,19 +1,35 @@
-const BASE_URL = 'http://localhost:3000/api/v1';
+import { apiHealth } from '$lib/stores/app';
+
+const API_BASE = 'http://localhost:3000/api';
+const API_V1 = API_BASE + '/v1';
+
+export async function checkHealth() {
+    apiHealth.set('checking');
+
+    try {
+        const res = await fetch(`${API_BASE}/health`);
+        apiHealth.set(res.ok ? 'online' : 'offline');
+    } catch {
+        apiHealth.set('offline');
+    }
+}
+
+async function apiFetch(path: string, options?: RequestInit) {
+    const res = await fetch(`${API_V1}${path}`, options);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+}
 
 export async function createGame(mode: 'ai' | 'multiplayer') {
-    const res = await fetch(`${BASE_URL}/game`, {
+    return apiFetch('/game', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode })
     });
-
-    return res.json();
 }
 
 export async function joinGame(code: string) {
-    const res = await fetch(`${BASE_URL}/game/${code}/join`, {
+    return apiFetch(`/game/${code}/join`, {
         method: 'POST'
     });
-
-    return res.json();
 }
