@@ -76,8 +76,14 @@
             const adj_cell = cells[nr]?.[nc];
             const adj_ship = adj_cell ? getShipType(adj_cell) : null;
 
-            if (!adj_ship || adj_ship !== ship) {
-                classes += ` ${cls} border-indigo-600`;
+            if (adj_ship !== ship) {
+                if (cell.type === 'ship' || cell.type === 'placed') {
+                    classes += ` ${cls} border-indigo-600`;
+                } else if (cell.type === 'hit' || cell.type === 'preview-invalid') {
+                    classes += ` ${cls} border-red-600`;
+                } else {
+                    classes += ` ${cls} border-green-600`;
+                }
             }
         }
         return classes;

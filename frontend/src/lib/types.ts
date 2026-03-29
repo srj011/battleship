@@ -5,7 +5,7 @@ export type Direction = 'horizontal' | 'vertical';
 export type CellView =
     | { type: 'unknown' }
     | { type: 'empty' }
-    | { type: 'hit' }
+    | { type: 'hit'; ship_type: ShipType }
     | { type: 'miss' }
     | { type: 'blocked' }
     | { type: 'ship'; ship_type: ShipType };
