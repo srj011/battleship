@@ -33,7 +33,7 @@ impl Board {
         start: Coord,
         direction: Direction,
     ) -> Result<Vec<Coord>, PlacementError> {
-        let length = ship_type.length();
+        let length = ship_type.length() as usize;
         let mut positions = Vec::with_capacity(length);
 
         for i in 0..length {

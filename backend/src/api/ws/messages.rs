@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::api::types::{ApiCoord, ApiShipPlacement};
 use crate::app::board_view::BoardView;
+use crate::app::fleet_view::FleetView;
 use crate::app::game_session::TurnEvent;
 use crate::game::game_state::{GameStatus, Turn};
 
@@ -22,6 +23,8 @@ pub enum ServerMessage {
         status: GameStatus,
         player_board: BoardView,
         opponent_board: BoardView,
+        player_fleet: FleetView,
+        opponent_fleet: FleetView,
     },
     GameUpdate {
         event: TurnEvent,

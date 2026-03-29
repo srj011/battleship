@@ -95,6 +95,8 @@ async fn handle_socket(
             status: session.status(),
             player_board: snapshot.player_board,
             opponent_board: snapshot.opponent_board,
+            player_fleet: snapshot.player_fleet,
+            opponent_fleet: snapshot.opponent_fleet,
         }
     };
 
@@ -173,6 +175,8 @@ async fn handle_socket(
                                     status: session.status(),
                                     player_board: snapshot.player_board,
                                     opponent_board: snapshot.opponent_board,
+                                    player_fleet: snapshot.player_fleet,
+                                    opponent_fleet: snapshot.opponent_fleet,
                                 },
                                 GameUpdate::ShotFired{ event } => ServerMessage::GameUpdate {
                                     event,
@@ -228,6 +232,8 @@ async fn handle_place_fleet(
         status: session.status(),
         player_board: snapshot.player_board,
         opponent_board: snapshot.opponent_board,
+        player_fleet: snapshot.player_fleet,
+        opponent_fleet: snapshot.opponent_fleet,
     })
 }
 

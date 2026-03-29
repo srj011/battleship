@@ -16,15 +16,33 @@ pub enum ShotResult {
     AlreadyShot,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct DamageInfo {
+    pub ship_type: ShipType,
+    pub total: u8,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct ShotOutcome {
     pub result: ShotResult,
     pub blocked: Vec<Coord>,
+    pub sunk_ship: Option<ShipType>,
+    pub damage: Option<DamageInfo>,
 }
 
 impl ShotOutcome {
-    pub fn new(result: ShotResult, blocked: Vec<Coord>) -> Self {
-        Self { result, blocked }
+    pub fn new(
+        result: ShotResult,
+        blocked: Vec<Coord>,
+        sunk_ship: Option<ShipType>,
+        damage: Option<DamageInfo>,
+    ) -> Self {
+        Self {
+            result,
+            blocked,
+            sunk_ship,
+            damage,
+        }
     }
 }
 
@@ -43,6 +61,10 @@ impl Player {
 
     pub fn board(&self) -> &Board {
         &self.board
+    }
+
+    pub fn ships(&self) -> &[Ship] {
+        &self.ships
     }
 
     pub fn place_fleet(&mut self, placements: Vec<ShipPlacement>) -> Result<(), PlacementError> {
@@ -71,7 +93,7 @@ impl Player {
         let mut rng = rand::rng();
 
         for ship_type in FLEET {
-            let length = ship_type.length();
+            let length = ship_type.length() as usize;
             loop {
                 let direction = if rng.random_bool(0.5) {
                     Direction::Horizontal
@@ -114,25 +136,33 @@ impl Player {
 
     pub fn fire_at(&mut self, coord: Coord) -> ShotOutcome {
         match self.board.fire_at(coord) {
-            FireOutcome::Miss => ShotOutcome::new(ShotResult::Miss, Vec::new()),
-            FireOutcome::AlreadyShot => ShotOutcome::new(ShotResult::AlreadyShot, Vec::new()),
+            FireOutcome::Miss => ShotOutcome::new(ShotResult::Miss, Vec::new(), None, None),
+            FireOutcome::AlreadyShot => {
+                ShotOutcome::new(ShotResult::AlreadyShot, Vec::new(), None, None)
+            }
             FireOutcome::Hit(ship_type) => {
-                let sunk_positions = {
+                let (sunk_positions, hits) = {
                     let ship = self.get_ship_mut(ship_type);
                     ship.register_hit();
+                    let hits = ship.hits();
 
                     if ship.is_sunk() {
-                        Some(ship.positions().clone())
+                        (Some(ship.positions().clone()), hits)
                     } else {
-                        None
+                        (None, hits)
                     }
                 };
 
+                let damage = Some(DamageInfo {
+                    ship_type,
+                    total: hits,
+                });
+
                 if let Some(positions) = sunk_positions {
                     let blocked = self.mark_adjacent_as_blocked(&positions);
-                    ShotOutcome::new(ShotResult::Sunk, blocked)
+                    ShotOutcome::new(ShotResult::Sunk, blocked, Some(ship_type), damage)
                 } else {
-                    ShotOutcome::new(ShotResult::Hit, Vec::new())
+                    ShotOutcome::new(ShotResult::Hit, Vec::new(), None, damage)
                 }
             }
         }
