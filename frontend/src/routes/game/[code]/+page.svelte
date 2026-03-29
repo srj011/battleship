@@ -22,7 +22,10 @@
 
 <div class="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 p-4">
     {#if !$gameStore.connected}
-        <p class="text-red-400">Connecting...</p>
+        <div class="flex min-h-screen items-center justify-center gap-3 text-black">
+            <div class="h-2 w-2 animate-pulse rounded-full bg-black"></div>
+            <p>Connecting to game...</p>
+        </div>
     {:else if !$gameStore.game}
         <p>Loading game...</p>
     {:else if $gameStore.game.status.type === 'placing_ships'}

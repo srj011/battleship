@@ -26,16 +26,14 @@
 </script>
 
 <div class="flex flex-col items-center gap-2">
-    <h1 class="text-2xl font-bold">Game</h1>
-
-    {#if !$gameStore.connected}
-        <p class="text-red-400">Connecting...</p>
-    {/if}
-
     {#if $gameStore.game}
         <!-- Turn Indicator -->
-        <div class={`text-lg font-semibold ${isMyTurn ? 'text-green-500' : 'text-gray-400'}`}>
-            {isMyTurn ? 'Your Turn' : "Opponent's Turn"}
+        <div class="w-full max-w-3xl rounded bg-gray-200 px-4 py-3 text-sm text-black">
+            <div class="flex items-center justify-center">
+                <span class="font-semibold">
+                    {isMyTurn ? 'Your Turn' : "Opponent's Turn"}
+                </span>
+            </div>
         </div>
 
         <!-- Board's flexbox -->
