@@ -51,7 +51,7 @@
     <!-- Footer -->
     <footer class="bg-gray-200 text-sm text-gray-500">
         <div class="mx-auto flex max-w-5xl justify-between px-4 py-3">
-            <span>© Samved Rajesh 2026</span>
+            <span>©</span>
             <span>Built with Rust & Svelte</span>
         </div>
     </footer>

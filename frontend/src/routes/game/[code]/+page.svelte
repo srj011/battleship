@@ -20,7 +20,7 @@
     });
 </script>
 
-<div class="flex justify-center gap-6 p-4">
+<div class="flex flex-1 justify-center gap-6 p-4">
     {#if !$gameStore.connected}
         <div class="flex flex-1 items-center justify-center gap-3 text-black">
             <div class="h-2 w-2 animate-pulse rounded-full bg-black"></div>

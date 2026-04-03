@@ -10,7 +10,7 @@
 
         const res = await createGame(mode);
         // eslint-disable-next-line svelte/no-navigation-without-resolve
-        await goto(`/game/${res.game_code}?player_token=${res.player_token}`);
+        goto(`/game/${res.game_code}?player_token=${res.player_token}`);
     }
 
     async function handleJoin() {
@@ -21,7 +21,7 @@
         const res = await joinGame(game_code);
 
         // eslint-disable-next-line svelte/no-navigation-without-resolve
-        await goto(`/game/${game_code}?player_token=${res.player_token}`);
+        goto(`/game/${game_code}?player_token=${res.player_token}`);
     }
 </script>
 
