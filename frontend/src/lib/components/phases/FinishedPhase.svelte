@@ -1,6 +1,10 @@
 <script lang="ts">
     import { gameStore } from '$lib/stores/game';
     import Board from '$lib/components/Board.svelte';
+    import Fleet from '$lib/components/Fleet.svelte';
+
+    const playerFleet = $derived($gameStore.game?.player_fleet);
+    const opponentFleet = $derived($gameStore.game?.opponent_fleet);
 </script>
 
 <div class="flex flex-col items-center gap-2">
@@ -27,18 +31,28 @@
                 </div>
             </div>
         {/if}
-        <!-- Board's flexbox -->
+
         <div class="flex gap-16">
             <!-- Player's board -->
             <div class="rounded p-2">
                 <Board board={$gameStore.game.player_board} />
                 <p class="my-3 text-center text-sm">Your board</p>
+
+                <!-- Player's fleet -->
+                {#if playerFleet}
+                    <Fleet fleet={playerFleet} variant="player" />
+                {/if}
             </div>
 
             <!-- Opponent's board-->
             <div class="rounded p-2">
                 <Board board={$gameStore.game.opponent_board} />
                 <p class="my-3 text-center text-sm">Opponent's board</p>
+
+                <!-- Opponent's fleet -->
+                {#if opponentFleet}
+                    <Fleet fleet={opponentFleet} variant="opponent" />
+                {/if}
             </div>
         </div>
     {/if}

@@ -2,7 +2,11 @@
     import { sendWS } from '$lib/api/websocket';
     import { gameStore } from '$lib/stores/game';
     import Board from '$lib/components/Board.svelte';
+    import Fleet from '$lib/components/Fleet.svelte';
     import type { CellView, Coord, FireMessage, PreviewCell } from '$lib/types';
+
+    const playerFleet = $derived($gameStore.game?.player_fleet);
+    const opponentFleet = $derived($gameStore.game?.opponent_fleet);
 
     const isMyTurn = $derived(
         $gameStore.game?.status.type === 'ongoing' &&
@@ -36,23 +40,38 @@
             </div>
         </div>
 
-        <!-- Board's flexbox -->
         <div class="flex gap-16">
-            <!-- Player's board -->
-            <div class={`rounded p-2 ${isMyTurn ? 'opacity-60' : ''}`}>
-                <Board board={$gameStore.game.player_board} />
-                <p class="my-3 text-center text-sm">Your board</p>
+            <!-- Player's section -->
+            <div class="flex flex-col rounded p-2">
+                <!-- Player's Board -->
+                <Board
+                    class={`${isMyTurn ? 'opacity-60' : ''}`}
+                    board={$gameStore.game.player_board}
+                />
+                <h2 class="my-3 text-center text-sm">Your board</h2>
+
+                <!-- Player's fleet -->
+                {#if playerFleet}
+                    <Fleet fleet={playerFleet} variant="player" />
+                {/if}
             </div>
 
-            <!-- Opponent's board-->
-            <div class={`rounded p-2 ${!isMyTurn ? 'opacity-60' : ''}`}>
+            <!-- Opponent's section-->
+            <div class="flex flex-col rounded p-2">
+                <!-- Opponent's Board -->
                 <Board
+                    class={`${!isMyTurn ? 'opacity-60' : ''}`}
                     board={$gameStore.game.opponent_board}
                     clickable={isMyTurn}
                     onCellClick={handleFire}
                     {isCellClickable}
                 />
-                <p class="my-3 text-center text-sm">Opponent's board</p>
+                <h2 class="my-3 text-center text-sm">Opponent's board</h2>
+
+                <!-- Opponent's fleet -->
+                {#if opponentFleet}
+                    <Fleet fleet={opponentFleet} variant="opponent" />
+                {/if}
             </div>
         </div>
     {/if}

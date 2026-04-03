@@ -10,21 +10,25 @@
 
     const COL_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 
-    const {
-        board,
-        clickable = false,
-        onCellClick,
-        onRightClick,
-        onCellHover,
-        isCellClickable
-    } = $props<{
+    interface Props {
         board: BoardView | PreviewBoard;
         clickable?: boolean;
         onCellClick?: (coord: Coord) => void;
         onRightClick?: (coord: Coord) => void;
         onCellHover?: (coord: Coord) => void;
         isCellClickable?: (cell: CellView | PreviewCell) => boolean;
-    }>();
+        class?: string;
+    }
+
+    const {
+        board,
+        clickable = false,
+        onCellClick,
+        onRightClick,
+        onCellHover,
+        isCellClickable = () => true,
+        class: className = ''
+    }: Props = $props();
 
     function handleClick(coord: Coord) {
         if (!clickable || !onCellClick) return;
@@ -103,7 +107,7 @@
     }
 </script>
 
-<div class="grid grid-cols-[auto_repeat(10,2.5rem)] items-center">
+<div class={`grid grid-cols-[auto_repeat(10,2.5rem)] items-center ${className}`}>
     <!-- Empty left corner space -->
     <div></div>
 
