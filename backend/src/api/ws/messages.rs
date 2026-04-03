@@ -25,6 +25,8 @@ pub enum ServerMessage {
         opponent_board: BoardView,
         player_fleet: FleetView,
         opponent_fleet: FleetView,
+        player_ready: bool,
+        opponent_ready: bool,
     },
     GameUpdate {
         event: TurnEvent,

@@ -58,6 +58,14 @@ impl GameState {
         self.current_turn
     }
 
+    pub fn player1_ready(&self) -> bool {
+        self.player1_ready
+    }
+
+    pub fn player2_ready(&self) -> bool {
+        self.player2_ready
+    }
+
     pub fn player(&self, player: Turn) -> &Player {
         match player {
             Turn::Player1 => &self.player1,

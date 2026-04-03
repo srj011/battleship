@@ -84,10 +84,11 @@ async fn handle_socket(
 
     eprintln!("[WS] Connected: {game_code} as {player:?}");
 
-    // Inital message
+    // Initial message
     let initial_message = {
         let session = session_arc.lock().unwrap();
         let snapshot = session.snapshot_for(player);
+        let (player_ready, opponent_ready) = session.ready_status(player);
 
         ServerMessage::GameState {
             player,
@@ -97,6 +98,8 @@ async fn handle_socket(
             opponent_board: snapshot.opponent_board,
             player_fleet: snapshot.player_fleet,
             opponent_fleet: snapshot.opponent_fleet,
+            player_ready,
+            opponent_ready,
         }
     };
 
@@ -167,6 +170,7 @@ async fn handle_socket(
                         let message = {
                             let session = session_arc.lock().unwrap();
                             let snapshot = session.snapshot_for(player);
+                            let (player_ready, opponent_ready) = session.ready_status(player);
 
                             match update {
                                 GameUpdate::StateChanged => ServerMessage::GameState {
@@ -177,6 +181,8 @@ async fn handle_socket(
                                     opponent_board: snapshot.opponent_board,
                                     player_fleet: snapshot.player_fleet,
                                     opponent_fleet: snapshot.opponent_fleet,
+                                    player_ready,
+                                    opponent_ready,
                                 },
                                 GameUpdate::ShotFired{ event } => ServerMessage::GameUpdate {
                                     event,
@@ -225,6 +231,7 @@ async fn handle_place_fleet(
     let mut session = session_arc.lock().unwrap();
     session.place_fleet(player, placements)?;
     let snapshot = session.snapshot_for(player);
+    let (player_ready, opponent_ready) = session.ready_status(player);
 
     Ok(ServerMessage::GameState {
         player,
@@ -234,6 +241,8 @@ async fn handle_place_fleet(
         opponent_board: snapshot.opponent_board,
         player_fleet: snapshot.player_fleet,
         opponent_fleet: snapshot.opponent_fleet,
+        player_ready,
+        opponent_ready,
     })
 }
 

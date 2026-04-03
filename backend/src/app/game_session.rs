@@ -130,6 +130,13 @@ impl GameSession {
         self.player2_token
     }
 
+    pub fn ready_status(&self, player: Turn) -> (bool, bool) {
+        match player {
+            Turn::Player1 => (self.game.player1_ready(), self.game.player2_ready()),
+            Turn::Player2 => (self.game.player2_ready(), self.game.player1_ready()),
+        }
+    }
+
     pub fn join_player(&mut self) -> Result<Uuid, GameError> {
         if self.player2_token().is_some() {
             return Err(GameError::GameFull);
