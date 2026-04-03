@@ -31,12 +31,8 @@ impl SessionManager {
 
     pub fn create_vs_ai(&mut self) -> (String, Uuid) {
         let id = Uuid::new_v4();
-        let session_arc = Arc::new(Mutex::new(GameSession::new_vs_ai()));
-
-        let player1_token = {
-            let session = session_arc.lock().unwrap();
-            session.player1_token()
-        };
+        let (session, player1_token) = GameSession::new_vs_ai();
+        let session_arc = Arc::new(Mutex::new(session));
 
         let code = loop {
             let code = Self::generate_code();
@@ -52,12 +48,8 @@ impl SessionManager {
 
     pub fn create_multiplayer(&mut self) -> (String, Uuid) {
         let id = Uuid::new_v4();
-        let session_arc = Arc::new(Mutex::new(GameSession::new_vs_multiplayer()));
-
-        let player1_token = {
-            let session = session_arc.lock().unwrap();
-            session.player1_token()
-        };
+        let (session, player1_token) = GameSession::new_vs_multiplayer();
+        let session_arc = Arc::new(Mutex::new(session));
 
         let code = loop {
             let code = Self::generate_code();

@@ -51,59 +51,80 @@ pub enum GameUpdate {
     ShotFired { event: TurnEvent },
 }
 
+#[derive(Debug)]
+pub enum PlayerSlot {
+    Empty,
+    Human { token: Uuid },
+    AI,
+}
+
 pub struct GameSession {
     game: GameState,
+    player1: PlayerSlot,
+    player2: PlayerSlot,
     ai: Option<AiPlayer>,
     history: Vec<TurnEvent>,
     tx: broadcast::Sender<GameUpdate>,
-    player1_token: Uuid,
-    player2_token: Option<Uuid>,
 }
 
 impl GameSession {
-    pub fn new_vs_ai() -> Self {
-        let player1 = Player::new();
+    pub fn new_vs_ai() -> (Self, Uuid) {
+        let player1_state = Player::new();
         let player1_token = Uuid::new_v4();
+        let player1 = PlayerSlot::Human {
+            token: player1_token,
+        };
 
-        let player2 = Player::new();
+        let player2_state = Player::new();
+        let player2 = PlayerSlot::AI;
 
         let (tx, _) = broadcast::channel(32);
-        let mut game = GameState::new(player1, player2);
+        let mut game = GameState::new(player1_state, player2_state);
 
+        // AI Player
         let ai = Some(AiPlayer::new());
-        // AI Fleet
         let ai_fleet = Player::generate_random_fleet();
         game.place_fleet(Turn::Player2, ai_fleet)
             .expect("AI fleet placement failed");
 
-        Self {
-            game,
-            ai,
-            history: Vec::new(),
-            tx,
+        (
+            Self {
+                game,
+                player1,
+                player2,
+                ai,
+                history: Vec::new(),
+                tx,
+            },
             player1_token,
-            player2_token: None,
-        }
+        )
     }
 
-    pub fn new_vs_multiplayer() -> Self {
-        let player1 = Player::new();
+    pub fn new_vs_multiplayer() -> (Self, Uuid) {
+        let player1_state = Player::new();
         let player1_token = Uuid::new_v4();
+        let player1 = PlayerSlot::Human {
+            token: player1_token,
+        };
 
-        let player2 = Player::new();
+        let player2_state = Player::new();
+        let player2 = PlayerSlot::Empty;
 
         let (tx, _) = broadcast::channel(32);
 
-        let game = GameState::new(player1, player2);
+        let game = GameState::new(player1_state, player2_state);
 
-        Self {
-            game,
-            ai: None,
-            history: Vec::new(),
-            tx,
+        (
+            Self {
+                game,
+                player1,
+                player2,
+                ai: None,
+                history: Vec::new(),
+                tx,
+            },
             player1_token,
-            player2_token: None,
-        }
+        )
     }
 
     pub fn status(&self) -> GameStatus {
@@ -114,20 +135,20 @@ impl GameSession {
         self.game.current_turn()
     }
 
+    pub fn player1(&self) -> &PlayerSlot {
+        &self.player1
+    }
+
+    pub fn player2(&self) -> &PlayerSlot {
+        &self.player2
+    }
+
     pub fn events(&self) -> &[TurnEvent] {
         &self.history
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<GameUpdate> {
         self.tx.subscribe()
-    }
-
-    pub fn player1_token(&self) -> Uuid {
-        self.player1_token
-    }
-
-    pub fn player2_token(&self) -> Option<Uuid> {
-        self.player2_token
     }
 
     pub fn ready_status(&self, player: Turn) -> (bool, bool) {
@@ -138,23 +159,23 @@ impl GameSession {
     }
 
     pub fn join_player(&mut self) -> Result<Uuid, GameError> {
-        if self.player2_token().is_some() {
-            return Err(GameError::GameFull);
+        match self.player2 {
+            PlayerSlot::Empty => {
+                let player_token = Uuid::new_v4();
+                self.player2 = PlayerSlot::Human {
+                    token: player_token,
+                };
+                Ok(player_token)
+            }
+            _ => Err(GameError::GameFull),
         }
-
-        let player_token = Uuid::new_v4();
-        self.player2_token = Some(player_token);
-
-        Ok(player_token)
     }
 
     pub fn player_from_token(&self, token: Uuid) -> Option<Turn> {
-        if token == self.player1_token {
-            Some(Turn::Player1)
-        } else if Some(token) == self.player2_token {
-            Some(Turn::Player2)
-        } else {
-            None
+        match (&self.player1, &self.player2) {
+            (PlayerSlot::Human { token: t1 }, _) if *t1 == token => Some(Turn::Player1),
+            (_, PlayerSlot::Human { token: t2 }) if *t2 == token => Some(Turn::Player2),
+            _ => None,
         }
     }
 
