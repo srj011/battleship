@@ -16,6 +16,8 @@
     } from '$lib/types';
     import { isWithinBounds } from '$lib/game/utils';
 
+    const isWaiting = $derived($gameStore.game?.player_ready && !$gameStore.game.opponent_ready);
+
     let activeShip = $state<ShipPlacement | null>(null);
     let committedShip = $state<ShipPlacement | null>(null);
     let placements = $state<ShipPlacement[]>([]);
@@ -260,7 +262,7 @@
         <h3 class="mb-2 text-lg font-medium">Preview Board</h3>
         <Board
             board={previewBoard}
-            clickable={true}
+            clickable={!$gameStore.game?.player_ready}
             onCellClick={handleClick}
             onRightClick={handleRightClick}
             onCellHover={handleHover}
@@ -276,9 +278,18 @@
         <button
             class="rounded bg-green-500 px-4 py-2 text-white disabled:opacity-50"
             onclick={placeFleet}
-            disabled={placements.length !== TOTAL_SHIPS}
+            disabled={placements.length !== TOTAL_SHIPS || $gameStore.game?.player_ready}
         >
-            Confirm Placement
+            {isWaiting ? 'Waiting for Opponent...' : 'Confirm Placement'}
         </button>
+    </div>
+
+    <div>
+        {#if isWaiting}
+            <p>Waiting for opponent...</p>
+        {/if}
+        {#if $gameStore.game?.opponent_ready}
+            <p>Opponent ready</p>
+        {/if}
     </div>
 </div>
