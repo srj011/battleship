@@ -59,7 +59,7 @@ export type GameStatus =
 
 export type ShipStatus = {
     ship_type: ShipType;
-    damage: number;
+    damage?: number;
     sunk: boolean;
 };
 

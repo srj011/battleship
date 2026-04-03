@@ -3,7 +3,7 @@ use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::app::board_view::{BoardPerspective, BoardView};
-use crate::app::fleet_view::{FleetView, ShipStatus};
+use crate::app::fleet_view::{FleetPerspective, FleetView};
 use crate::game::ai::AiPlayer;
 use crate::game::coord::Coord;
 use crate::game::errors::GameError;
@@ -188,8 +188,8 @@ impl GameSession {
             status: self.status(),
             player_board: BoardView::new(player.board(), BoardPerspective::Owner),
             opponent_board: BoardView::new(opponent.board(), BoardPerspective::Opponent),
-            player_fleet: Self::build_fleet_view(player),
-            opponent_fleet: Self::build_fleet_view(opponent),
+            player_fleet: FleetView::from_fleet(player.ships(), FleetPerspective::Owner),
+            opponent_fleet: FleetView::from_fleet(opponent.ships(), FleetPerspective::Opponent),
         }
     }
 
@@ -266,15 +266,5 @@ impl GameSession {
         self.history.push(event.clone());
 
         Ok(event)
-    }
-
-    pub fn build_fleet_view(player: &Player) -> FleetView {
-        FleetView::new(
-            player
-                .ships()
-                .iter()
-                .map(|ship| ShipStatus::new(ship.ship_type(), ship.hits(), ship.is_sunk()))
-                .collect(),
-        )
     }
 }

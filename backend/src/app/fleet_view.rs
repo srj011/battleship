@@ -1,22 +1,17 @@
 use serde::Serialize;
 
-use crate::game::ship::ShipType;
+use crate::game::ship::{Ship, ShipType};
 
 #[derive(Debug, Clone, Copy, Serialize)]
 pub struct ShipStatus {
     pub ship_type: ShipType,
-    pub damage: u8,
+    pub damage: Option<u8>,
     pub sunk: bool,
 }
 
-impl ShipStatus {
-    pub fn new(ship_type: ShipType, damage: u8, sunk: bool) -> Self {
-        Self {
-            ship_type,
-            damage,
-            sunk,
-        }
-    }
+pub enum FleetPerspective {
+    Owner,
+    Opponent,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -25,7 +20,22 @@ pub struct FleetView {
 }
 
 impl FleetView {
-    pub fn new(ships: Vec<ShipStatus>) -> Self {
+    pub fn from_fleet(fleet: &[Ship], perspective: FleetPerspective) -> Self {
+        let ships = fleet
+            .iter()
+            .map(|ship| match perspective {
+                FleetPerspective::Owner => ShipStatus {
+                    ship_type: ship.ship_type(),
+                    damage: Some(ship.hits()),
+                    sunk: ship.is_sunk(),
+                },
+                FleetPerspective::Opponent => ShipStatus {
+                    ship_type: ship.ship_type(),
+                    damage: None,
+                    sunk: ship.is_sunk(),
+                },
+            })
+            .collect();
         Self { ships }
     }
 }
