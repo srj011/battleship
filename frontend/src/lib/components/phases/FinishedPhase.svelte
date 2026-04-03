@@ -9,7 +9,7 @@
         {#if $gameStore.game.status.type === 'finished'}
             <div
                 class={`${
-                    $gameStore.game.status.winner === $gameStore.player
+                    $gameStore.game.status.winner === $gameStore.game.player
                         ? 'bg-green-600'
                         : 'bg-red-600'
                 }
@@ -17,7 +17,7 @@
             >
                 <div class="flex items-center justify-between">
                     <span class="font-semibold">
-                        {$gameStore.game.status.winner === $gameStore.player
+                        {$gameStore.game.status.winner === $gameStore.game.player
                             ? 'Game over. You won!'
                             : 'Game over. You lost.'}
                     </span>

@@ -6,8 +6,8 @@
 
     const isMyTurn = $derived(
         $gameStore.game?.status.type === 'ongoing' &&
-            $gameStore.player !== null &&
-            $gameStore.player === $gameStore.game.turn
+            $gameStore.game.player !== null &&
+            $gameStore.game.player === $gameStore.game.turn
     );
 
     function handleFire(coord: Coord) {

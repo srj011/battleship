@@ -1,3 +1,8 @@
+export type Coord = {
+    row: number;
+    col: number;
+};
+
 export type ShipType = 'carrier' | 'battleship' | 'destroyer' | 'submarine' | 'patrolboat';
 
 export type Direction = 'horizontal' | 'vertical';
@@ -14,19 +19,37 @@ export type BoardView = {
     cells: CellView[][];
 };
 
-export type Coord = {
-    row: number;
-    col: number;
+export type PreviewCell =
+    | { type: 'empty' }
+    | { type: 'blocked' }
+    | { type: 'placed'; ship_type: ShipType }
+    | { type: 'preview-valid'; ship_type: ShipType }
+    | { type: 'preview-invalid'; ship_type: ShipType };
+
+export type PreviewBoard = {
+    cells: PreviewCell[][];
 };
 
 export type Player = 'player1' | 'player2';
 
 export type ShotResult = 'hit' | 'miss' | 'sunk' | 'alreadyshot';
 
+export type DamageInfo = {
+    ship_type: ShipType;
+    total: number;
+};
+
+export type ShotOutcome = {
+    result: ShotResult;
+    blocked: Coord[];
+    sunk_ship?: ShipType;
+    damage?: DamageInfo;
+};
+
 export type TurnEvent = {
     player: Player;
     coord: Coord;
-    result: ShotResult;
+    outcome: ShotOutcome;
 };
 
 export type GameStatus =
@@ -34,6 +57,24 @@ export type GameStatus =
     | { type: 'ongoing' }
     | { type: 'finished'; winner: Player };
 
+export type ShipStatus = {
+    ship_type: ShipType;
+    damage: number;
+    sunk: boolean;
+};
+
+export type FleetView = {
+    ships: ShipStatus[];
+};
+
+export type ShipPlacement = {
+    ship_type: 'carrier' | 'battleship' | 'destroyer' | 'submarine' | 'patrolboat';
+    start: Coord;
+    direction: 'horizontal' | 'vertical';
+};
+
+// Server Message
+/* ----------------------------------------------------------------------------------- */
 export type GameState = {
     type: 'game_state';
     player: Player;
@@ -41,6 +82,10 @@ export type GameState = {
     status: GameStatus;
     player_board: BoardView;
     opponent_board: BoardView;
+    player_fleet: FleetView;
+    opponent_fleet: FleetView;
+    player_ready: boolean;
+    opponent_ready: boolean;
 };
 
 export type GameUpdate = {
@@ -50,12 +95,6 @@ export type GameUpdate = {
     status: GameStatus;
     player_board: BoardView;
     opponent_board: BoardView;
-};
-
-export type ShipPlacement = {
-    ship_type: 'carrier' | 'battleship' | 'destroyer' | 'submarine' | 'patrolboat';
-    start: Coord;
-    direction: 'horizontal' | 'vertical';
 };
 
 export type RandomFleet = {
@@ -69,14 +108,10 @@ export type ErrorMessage = {
 };
 
 export type ServerMessage = GameState | GameUpdate | RandomFleet | ErrorMessage;
+/* ----------------------------------------------------------------------------------- */
 
-export type GameSnapshot = {
-    turn: Player;
-    status: GameStatus;
-    player_board: BoardView;
-    opponent_board: BoardView;
-};
-
+// Client Message
+/* ----------------------------------------------------------------------------------- */
 export type RandomFleetMessage = {
     type: 'random_fleet';
 };
@@ -92,14 +127,4 @@ export type FireMessage = {
 };
 
 export type ClientMessage = RandomFleetMessage | PlaceFleetMessage | FireMessage;
-
-export type PreviewCell =
-    | { type: 'empty' }
-    | { type: 'blocked' }
-    | { type: 'placed'; ship_type: ShipType }
-    | { type: 'preview-valid'; ship_type: ShipType }
-    | { type: 'preview-invalid'; ship_type: ShipType };
-
-export type PreviewBoard = {
-    cells: PreviewCell[][];
-};
+/* ----------------------------------------------------------------------------------- */

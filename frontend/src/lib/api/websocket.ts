@@ -21,17 +21,10 @@ export function connectWS(code: string, token: string) {
         switch (msg.type) {
             case 'game_state':
                 gameStore.setGame(msg);
-                gameStore.setPlayer(msg.player);
                 break;
 
             case 'game_update':
-                gameStore.setGame({
-                    turn: msg.turn,
-                    status: msg.status,
-                    player_board: msg.player_board,
-                    opponent_board: msg.opponent_board
-                });
-
+                gameStore.applyGameUpdate(msg);
                 console.log(msg.event);
                 break;
 

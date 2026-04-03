@@ -71,8 +71,7 @@
     });
 
     onMount(() => {
-        const msg: ClientMessage = { type: 'random_fleet' };
-        sendWS(msg);
+        generateRandomFleet();
     });
 
     $effect(() => {
