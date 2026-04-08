@@ -29,26 +29,26 @@
     }
 </script>
 
-<div class="flex flex-col items-center gap-2">
+<div class="flex flex-col items-center gap-8">
     {#if $gameStore.game}
         <!-- Turn Indicator -->
-        <div class="w-full max-w-3xl rounded bg-gray-200 px-4 py-3 text-sm text-black">
+        <div class="mx-auto max-w-md rounded bg-gray-200 px-4 py-3 text-sm text-black">
             <div class="flex items-center justify-center">
-                <span class="font-semibold">
+                <span class="font-semibold tracking-widest uppercase">
                     {isMyTurn ? 'Your Turn' : "Opponent's Turn"}
                 </span>
             </div>
         </div>
 
-        <div class="flex gap-16">
+        <div class="flex items-stretch gap-12">
             <!-- Player's section -->
-            <div class="flex flex-col rounded p-2">
+            <div class="flex flex-col gap-8 p-2">
+                <h2 class="text-center text-base font-bold tracking-wide uppercase">YOUR FLEET</h2>
                 <!-- Player's Board -->
                 <Board
                     class={`${isMyTurn ? 'opacity-60' : ''}`}
                     board={$gameStore.game.player_board}
                 />
-                <h2 class="my-3 text-center text-sm">Your board</h2>
 
                 <!-- Player's fleet -->
                 {#if playerFleet}
@@ -56,8 +56,24 @@
                 {/if}
             </div>
 
+            <!-- VS separator -->
+            <div class="relative flex items-center justify-center self-stretch">
+                <!-- Full vertical line -->
+                <div class="absolute inset-y-0 w-0.5 bg-neutral-300/30"></div>
+
+                <!-- VS text -->
+                <span
+                    class="z-10 bg-white px-2 text-sm tracking-widest text-neutral-600/80 uppercase"
+                >
+                    VS
+                </span>
+            </div>
+
             <!-- Opponent's section-->
-            <div class="flex flex-col rounded p-2">
+            <div class="flex flex-col gap-8 p-2">
+                <h2 class="text-center text-base font-bold tracking-wide uppercase">
+                    ENEMY WATERS
+                </h2>
                 <!-- Opponent's Board -->
                 <Board
                     class={`${!isMyTurn ? 'opacity-60' : ''}`}
@@ -66,7 +82,6 @@
                     onCellClick={handleFire}
                     {isCellClickable}
                 />
-                <h2 class="my-3 text-center text-sm">Opponent's board</h2>
 
                 <!-- Opponent's fleet -->
                 {#if opponentFleet}
