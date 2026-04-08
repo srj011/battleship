@@ -1,28 +1,31 @@
 <script lang="ts">
     import { createGame, joinGame } from '$lib/api/client';
+    import { gameStore } from '$lib/stores/game';
     import { goto } from '$app/navigation';
     import Icon from '@iconify/svelte';
+    import { resolve } from '$app/paths';
 
     let game_code = $state('');
     let loading = $state(false);
 
     async function handleCreate(mode: 'ai' | 'multiplayer') {
         loading = true;
+        gameStore.reset();
 
         const res = await createGame(mode);
-        // eslint-disable-next-line svelte/no-navigation-without-resolve
-        goto(`/game/${res.game_code}?player_token=${res.player_token}`);
+
+        goto(resolve(`/game/${res.game_code}?player_token=${res.player_token}`));
     }
 
     async function handleJoin() {
         if (!game_code) return;
 
         loading = true;
+        gameStore.reset();
 
         const res = await joinGame(game_code);
 
-        // eslint-disable-next-line svelte/no-navigation-without-resolve
-        goto(`/game/${game_code}?player_token=${res.player_token}`);
+        goto(resolve(`/game/${game_code}?player_token=${res.player_token}`));
     }
 </script>
 
@@ -73,19 +76,28 @@
         </button>
 
         <!-- Join Game -->
-        <div class="flex items-center justify-between border px-6 py-5">
-            <div class="flex flex-1 items-center gap-4">
-                <Icon icon="mdi:key" class="h-6 w-6" />
-                <input
-                    bind:value={game_code}
-                    placeholder="ENTER CODE"
-                    class="w-full bg-transparent outline-none"
-                />
-            </div>
+        <div class="flex items-center border px-6 py-5">
+            <form
+                onsubmit={(e) => {
+                    e.preventDefault();
+                    handleJoin();
+                }}
+                class="flex w-full items-center justify-between"
+            >
+                <div class="flex flex-1 items-center gap-4">
+                    <Icon icon="mdi:key" class="h-6 w-6" />
+                    <input
+                        bind:value={game_code}
+                        placeholder="ENTER CODE"
+                        maxlength="6"
+                        class="w-full bg-transparent outline-none"
+                    />
+                </div>
 
-            <button onclick={handleJoin} disabled={loading} class="ml-4 cursor-pointer text-sm">
-                JOIN
-            </button>
+                <button type="submit" disabled={loading} class="ml-4 cursor-pointer text-sm">
+                    JOIN
+                </button>
+            </form>
         </div>
     </section>
 
