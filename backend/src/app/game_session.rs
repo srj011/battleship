@@ -65,6 +65,8 @@ pub struct GameSession {
     ai: Option<AiPlayer>,
     history: Vec<TurnEvent>,
     tx: broadcast::Sender<GameUpdate>,
+    player1_wants_rematch: bool,
+    player2_wants_rematch: bool,
 }
 
 impl GameSession {
@@ -95,6 +97,8 @@ impl GameSession {
                 ai,
                 history: Vec::new(),
                 tx,
+                player1_wants_rematch: false,
+                player2_wants_rematch: false,
             },
             player1_token,
         )
@@ -122,9 +126,72 @@ impl GameSession {
                 ai: None,
                 history: Vec::new(),
                 tx,
+                player1_wants_rematch: false,
+                player2_wants_rematch: false,
             },
             player1_token,
         )
+    }
+
+    fn restart_game(&mut self) -> Result<(), GameError> {
+        match self.game.status() {
+            GameStatus::Finished { .. } | GameStatus::Abandoned { .. } => {}
+            _ => return Err(GameError::InvalidGameState),
+        }
+
+        let player1_state = Player::new();
+        let player2_state = Player::new();
+        self.game = GameState::new(player1_state, player2_state);
+
+        self.history.clear();
+
+        if self.ai.is_some() {
+            self.ai = Some(AiPlayer::new());
+            let ai_fleet = Player::generate_random_fleet();
+            self.game
+                .place_fleet(Turn::Player2, ai_fleet)
+                .expect("AI fleet placement failed");
+        }
+
+        self.player1_wants_rematch = false;
+        self.player2_wants_rematch = false;
+
+        let _ = self.tx.send(GameUpdate::StateChanged);
+        Ok(())
+    }
+
+    pub fn request_rematch(&mut self, player: Turn) -> Result<bool, GameError> {
+        match self.game.status() {
+            GameStatus::Finished { .. } | GameStatus::Abandoned { .. } => {}
+            _ => return Err(GameError::InvalidGameState),
+        }
+
+        // vs AI mode
+        if self.ai.is_some() {
+            self.restart_game()?;
+            return Ok(true);
+        }
+
+        // Multiplayer mode
+        match player {
+            Turn::Player1 => self.player1_wants_rematch = true,
+            Turn::Player2 => self.player2_wants_rematch = true,
+        }
+
+        let both_ready = self.player1_wants_rematch && self.player2_wants_rematch;
+        if both_ready {
+            self.restart_game()?;
+        }
+
+        let _ = self.tx.send(GameUpdate::StateChanged);
+        Ok(both_ready)
+    }
+
+    pub fn rematch_status(&self, player: Turn) -> (bool, bool) {
+        match player {
+            Turn::Player1 => (self.player1_wants_rematch, self.player2_wants_rematch),
+            Turn::Player2 => (self.player2_wants_rematch, self.player1_wants_rematch),
+        }
     }
 
     pub fn status(&self) -> GameStatus {
