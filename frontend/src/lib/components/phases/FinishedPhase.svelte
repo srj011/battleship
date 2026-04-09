@@ -4,9 +4,14 @@
     import Board from '$lib/components/Board.svelte';
     import Fleet from '$lib/components/Fleet.svelte';
     import type { ClientMessage } from '$lib/types';
+    import Icon from '@iconify/svelte';
 
     const playerFleet = $derived($gameStore.game?.player_fleet);
     const opponentFleet = $derived($gameStore.game?.opponent_fleet);
+
+    const isWin =
+        $gameStore.game?.status.type === 'finished' &&
+        $gameStore.game.status.winner === $gameStore.game.player;
 
     const rematchSelf = $derived($gameStore.game?.player_rematch_ready ?? false);
     const rematchOpponent = $derived($gameStore.game?.opponent_rematch_ready ?? false);
@@ -17,23 +22,24 @@
     }
 </script>
 
-<div class="flex flex-col items-center gap-2">
+<div class="flex flex-col items-center gap-6">
     {#if $gameStore.game}
         <!-- GameOver Status -->
         {#if $gameStore.game.status.type === 'finished'}
-            <div
-                class={`${
-                    $gameStore.game.status.winner === $gameStore.game.player
-                        ? 'bg-green-600'
-                        : 'bg-red-600'
-                }
-                    w-full max-w-3xl rounded px-4 py-3 text-white`}
-            >
-                <div class="flex items-center justify-between">
-                    <span class="font-semibold">
-                        {$gameStore.game.status.winner === $gameStore.game.player
-                            ? 'Game over. You won!'
-                            : 'Game over. You lost.'}
+            <div class="flex w-full flex-col items-center gap-4">
+                <div
+                    class={`flex w-full items-center justify-center gap-3 rounded-xs py-4 shadow-lg ${
+                        isWin ? 'bg-green-700/90' : 'bg-red-700/90'
+                    }`}
+                >
+                    <Icon
+                        icon={isWin ? 'noto:trophy' : 'emojione:skull-and-crossbones'}
+                        font-size="25"
+                    />
+                    <span
+                        class="text-center text-xl font-semibold tracking-widest text-white uppercase"
+                    >
+                        {isWin ? 'VICTORY' : 'DEFEAT'}
                     </span>
                 </div>
                 <button
@@ -58,11 +64,12 @@
             </div>
         {/if}
 
-        <div class="flex gap-16">
-            <!-- Player's board -->
-            <div class="rounded p-2">
+        <div class="flex items-stretch gap-12">
+            <!-- Player's section -->
+            <div class="flex flex-col gap-8 p-2">
+                <h2 class="text-center text-base font-bold tracking-wide uppercase">YOUR FLEET</h2>
+                <!-- Player's Board -->
                 <Board board={$gameStore.game.player_board} />
-                <p class="my-3 text-center text-sm">Your board</p>
 
                 <!-- Player's fleet -->
                 {#if playerFleet}
@@ -70,10 +77,26 @@
                 {/if}
             </div>
 
-            <!-- Opponent's board-->
-            <div class="rounded p-2">
+            <!-- VS separator -->
+            <div class="relative flex items-center justify-center self-stretch">
+                <!-- Full vertical line -->
+                <div class="absolute inset-y-0 w-0.5 bg-neutral-300/30"></div>
+
+                <!-- VS text -->
+                <span
+                    class="z-10 bg-white px-2 text-sm tracking-widest text-neutral-600/80 uppercase"
+                >
+                    VS
+                </span>
+            </div>
+
+            <!-- Opponent's section-->
+            <div class="flex flex-col gap-8 p-2">
+                <h2 class="text-center text-base font-bold tracking-wide uppercase">
+                    ENEMY WATERS
+                </h2>
+                <!-- Opponent's Board -->
                 <Board board={$gameStore.game.opponent_board} />
-                <p class="my-3 text-center text-sm">Opponent's board</p>
 
                 <!-- Opponent's fleet -->
                 {#if opponentFleet}
