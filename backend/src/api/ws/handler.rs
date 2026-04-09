@@ -89,6 +89,7 @@ async fn handle_socket(
         let session = session_arc.lock().unwrap();
         let snapshot = session.snapshot_for(player);
         let (player_ready, opponent_ready) = session.ready_status(player);
+        let (player_rematch_ready, opponent_rematch_ready) = session.rematch_status(player);
 
         ServerMessage::GameState {
             player,
@@ -100,6 +101,8 @@ async fn handle_socket(
             opponent_fleet: snapshot.opponent_fleet,
             player_ready,
             opponent_ready,
+            player_rematch_ready,
+            opponent_rematch_ready,
         }
     };
 
@@ -148,6 +151,16 @@ async fn handle_socket(
                                 }
                             },
 
+                            Ok(ClientMessage::Restart) => {
+                                eprintln!("[WS] Restart requested");
+                                if let Err(e) = handle_rematch(session_arc.clone(), player).await {
+                                    eprintln!("[WS] Restart error");
+                                    let server_msg = map_error_to_message(e);
+                                    let error_msg = to_ws_message(server_msg);
+                                    let _ = sender.send(error_msg).await;
+                                }
+                            }
+
                             Err(err) => {
                                 eprintln!("Invalid message: {err}");
                             }
@@ -171,6 +184,7 @@ async fn handle_socket(
                             let session = session_arc.lock().unwrap();
                             let snapshot = session.snapshot_for(player);
                             let (player_ready, opponent_ready) = session.ready_status(player);
+                            let (player_rematch_ready, opponent_rematch_ready) = session.rematch_status(player);
 
                             match update {
                                 GameUpdate::StateChanged => ServerMessage::GameState {
@@ -183,6 +197,8 @@ async fn handle_socket(
                                     opponent_fleet: snapshot.opponent_fleet,
                                     player_ready,
                                     opponent_ready,
+                                    player_rematch_ready,
+                                    opponent_rematch_ready,
                                 },
                                 GameUpdate::ShotFired{ event } => ServerMessage::GameUpdate {
                                     event,
@@ -256,6 +272,15 @@ async fn handle_fire(
     let mut session = session_arc.lock().unwrap();
     session.player_fire(player, coord)?;
 
+    Ok(())
+}
+
+async fn handle_rematch(
+    session_arc: Arc<Mutex<GameSession>>,
+    player: Turn,
+) -> Result<(), ApiError> {
+    let mut session = session_arc.lock().unwrap();
+    session.request_rematch(player)?;
     Ok(())
 }
 

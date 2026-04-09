@@ -12,6 +12,7 @@ pub enum ClientMessage {
     Fire { coord: ApiCoord },
     RandomFleet,
     PlaceFleet { fleet: Vec<ApiShipPlacement> },
+    Restart,
 }
 
 #[derive(Debug, Serialize)]
@@ -27,6 +28,8 @@ pub enum ServerMessage {
         opponent_fleet: FleetView,
         player_ready: bool,
         opponent_ready: bool,
+        player_rematch_ready: bool,
+        opponent_rematch_ready: bool,
     },
     GameUpdate {
         event: TurnEvent,
@@ -38,6 +41,11 @@ pub enum ServerMessage {
 
     RandomFleet {
         fleet: Vec<ApiShipPlacement>,
+    },
+
+    RematchStatus {
+        self_ready: bool,
+        opponent_ready: bool,
     },
 
     Error {
