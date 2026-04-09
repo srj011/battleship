@@ -26,6 +26,7 @@ pub enum ServerMessage {
         opponent_board: BoardView,
         player_fleet: FleetView,
         opponent_fleet: FleetView,
+        opponent_joined: bool,
         player_ready: bool,
         opponent_ready: bool,
         player_rematch_ready: bool,
