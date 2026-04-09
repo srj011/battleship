@@ -16,12 +16,35 @@
     } from '$lib/types';
     import { isWithinBounds } from '$lib/game/utils';
 
+    const ships: ShipType[] = ['carrier', 'battleship', 'destroyer', 'submarine', 'patrolboat'];
+
     const isWaiting = $derived($gameStore.game?.player_ready && !$gameStore.game.opponent_ready);
 
-    let activeShip = $state<ShipPlacement | null>(null);
-    let committedShip = $state<ShipPlacement | null>(null);
-    let placements = $state<ShipPlacement[]>([]);
-    let hoverCoord = $state<Coord | null>(null);
+    const placementsMap = $state<Record<ShipType, ShipPlacement | null>>({
+        carrier: null,
+        battleship: null,
+        destroyer: null,
+        submarine: null,
+        patrolboat: null
+    });
+
+    const placements = $derived(
+        Object.values(placementsMap).filter((p): p is ShipPlacement => p !== null)
+    );
+    const progress = $derived((placements.length / ships.length) * 100);
+
+    let isInsideBoard = $state(false);
+
+    const isPlaced = (ship: ShipType) => placementsMap[ship] !== null;
+
+    type DragState = {
+        ship_type: ShipType;
+        anchor: Coord | null;
+        direction: Direction;
+        previous: ShipPlacement | null;
+    } | null;
+
+    let dragState = $state<DragState>(null);
 
     const previewBoard: PreviewBoard = $derived.by(() => {
         // Create empty grid
@@ -52,20 +75,20 @@
         }
 
         // Add preview
-        if (activeShip && hoverCoord) {
-            const clampedStart = clampStart(activeShip.ship_type, hoverCoord, activeShip.direction);
-
-            const shipCells = getShipCells(
-                activeShip.ship_type,
-                clampedStart,
-                activeShip.direction
+        if (dragState && dragState.anchor) {
+            const clampedStart = clampStart(
+                dragState.ship_type,
+                dragState.anchor,
+                dragState.direction
             );
+
+            const shipCells = getShipCells(dragState.ship_type, clampedStart, dragState.direction);
             const valid = isValidPlacement(shipCells);
 
             for (const cell of shipCells) {
                 cells[cell.row][cell.col] = {
                     type: valid ? 'preview-valid' : 'preview-invalid',
-                    ship_type: activeShip.ship_type
+                    ship_type: dragState.ship_type
                 };
             }
         }
@@ -79,10 +102,116 @@
     $effect(() => {
         if (!$gameStore.randomFleet) return;
 
-        placements = $gameStore.randomFleet;
-        activeShip = null;
-        committedShip = null;
+        for (const placement of $gameStore.randomFleet) {
+            placementsMap[placement.ship_type] = placement;
+        }
+        dragState = null;
     });
+
+    function startDrag(ship_type: ShipType) {
+        dragState = {
+            ship_type,
+            anchor: null,
+            direction: 'horizontal',
+            previous: placementsMap[ship_type]
+        };
+
+        placementsMap[ship_type] = null;
+    }
+
+    function handleDrag(coord: Coord) {
+        if (dragState) return;
+
+        const existing = getShipAt(coord);
+        if (!existing) return;
+
+        dragState = {
+            ship_type: existing.ship_type,
+            anchor: coord,
+            direction: existing.direction,
+            previous: existing
+        };
+
+        placementsMap[existing.ship_type] = null;
+    }
+
+    function handleHover(coord: Coord) {
+        if (!dragState) return;
+
+        isInsideBoard = true;
+        dragState.anchor = coord;
+    }
+
+    function handleDrop() {
+        if (!dragState) return;
+
+        if (!isInsideBoard || !dragState.anchor) {
+            const ship = dragState.ship_type;
+            placementsMap[ship] = null;
+            dragState = null;
+            return;
+        }
+
+        const clampedStart = clampStart(dragState.ship_type, dragState.anchor, dragState.direction);
+
+        const cells: Coord[] = getShipCells(dragState.ship_type, clampedStart, dragState.direction);
+
+        if (!isValidPlacement(cells)) {
+            if (dragState.previous) {
+                placementsMap[dragState.ship_type] = dragState.previous;
+            }
+            dragState = null;
+            return;
+        }
+
+        placementsMap[dragState.ship_type] = {
+            ship_type: dragState.ship_type,
+            start: clampedStart,
+            direction: dragState.direction
+        };
+        dragState = null;
+    }
+
+    function handleRightClick(coord: Coord) {
+        if (dragState) {
+            toggleDirection();
+            return;
+        }
+
+        const existing = getShipAt(coord);
+        if (!existing) return;
+
+        dragState = {
+            ship_type: existing.ship_type,
+            anchor: existing.start,
+            direction: existing.direction === 'horizontal' ? 'vertical' : 'horizontal',
+            previous: existing
+        };
+
+        placementsMap[existing.ship_type] = null;
+    }
+
+    function handleCancel() {
+        if (!dragState) return;
+
+        if (dragState.previous) {
+            placementsMap[dragState.ship_type] = dragState.previous;
+        }
+        dragState = null;
+    }
+
+    function handleLeave() {
+        if (!dragState) return;
+
+        isInsideBoard = false;
+        dragState.anchor = null;
+    }
+
+    function handleReset() {
+        for (const ship of ships) {
+            placementsMap[ship] = null;
+        }
+    }
 
     function createEmptyBoard(): PreviewBoard {
         return {
@@ -93,8 +222,8 @@
     }
 
     function toggleDirection() {
-        if (!activeShip) return;
-        activeShip.direction = activeShip.direction === 'horizontal' ? 'vertical' : 'horizontal';
+        if (!dragState) return;
+        dragState.direction = dragState.direction === 'horizontal' ? 'vertical' : 'horizontal';
     }
 
     function getShipAt(coord: Coord): ShipPlacement | null {
@@ -169,82 +298,6 @@
         };
         sendWS(msg);
     }
-
-    function handleHover(coord: Coord) {
-        hoverCoord = coord;
-    }
-
-    function handleClick(coord: Coord) {
-        const existing = getShipAt(coord);
-
-        if (existing) {
-            if (activeShip && committedShip) {
-                placements.push(committedShip);
-            }
-
-            placements = placements.filter((p) => p !== existing);
-            activeShip = { ...existing };
-            committedShip = existing;
-            return;
-        }
-
-        if (!activeShip) return;
-
-        const clampedStart = clampStart(activeShip.ship_type, coord, activeShip.direction);
-        const cells = getShipCells(activeShip.ship_type, clampedStart, activeShip.direction);
-        if (!isValidPlacement(cells)) return;
-
-        placements.push({
-            ...activeShip,
-            start: clampedStart
-        });
-
-        activeShip = null;
-        committedShip = null;
-    }
-
-    function handleRightClick(coord: Coord) {
-        // Active ship
-        if (activeShip) {
-            toggleDirection();
-            return;
-        }
-
-        //Rotate ship in place
-        const existing = getShipAt(coord);
-        if (!existing) return true;
-
-        placements = placements.filter((p) => p !== existing);
-
-        const rotated: ShipPlacement = {
-            ...existing,
-            direction: existing.direction === 'horizontal' ? 'vertical' : 'horizontal'
-        };
-        const cells = getShipCells(rotated.ship_type, rotated.start, rotated.direction);
-
-        if (isValidPlacement(cells)) {
-            placements.push(rotated);
-        } else {
-            activeShip = rotated;
-            committedShip = existing;
-        }
-    }
-
-    function handleCancel() {
-        if (!activeShip || !committedShip) return;
-
-        placements.push(committedShip);
-        activeShip = null;
-        committedShip = null;
-    }
-
-    function isCellClickable(cell: PreviewCell | CellView): boolean {
-        if (activeShip) {
-            return cell.type === 'empty' || cell.type === 'preview-valid';
-        } else {
-            return cell.type === 'placed';
-        }
-    }
 </script>
 
 <svelte:window
@@ -252,6 +305,7 @@
         if (e.key === 'Escape') handleCancel();
         if (e.key.toLowerCase() === 'r') toggleDirection();
     }}
+    onpointerup={handleDrop}
 />
 
 <div class="flex flex-col items-center gap-6">
@@ -263,10 +317,11 @@
         <Board
             board={previewBoard}
             clickable={!$gameStore.game?.player_ready}
-            onCellClick={handleClick}
             onRightClick={handleRightClick}
-            onCellHover={handleHover}
-            {isCellClickable}
+            onPointerEnter={handleHover}
+            onPointerUp={handleDrop}
+            onPointerDown={handleDrag}
+            onPointerLeave={handleLeave}
         />
     </div>
 

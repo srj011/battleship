@@ -15,8 +15,11 @@
         clickable?: boolean;
         onCellClick?: (coord: Coord) => void;
         onRightClick?: (coord: Coord) => void;
-        onCellHover?: (coord: Coord) => void;
         isCellClickable?: (cell: CellView | PreviewCell) => boolean;
+        onPointerUp?: () => void;
+        onPointerDown?: (coord: Coord) => void;
+        onPointerEnter?: (coord: Coord) => void;
+        onPointerLeave?: () => void;
         class?: string;
     }
 
@@ -25,8 +28,11 @@
         clickable = false,
         onCellClick,
         onRightClick,
-        onCellHover,
         isCellClickable = () => true,
+        onPointerUp,
+        onPointerDown,
+        onPointerEnter,
+        onPointerLeave,
         class: className = ''
     }: Props = $props();
 
@@ -107,7 +113,13 @@
     }
 </script>
 
-<div class={`grid grid-cols-[auto_repeat(10,2.5rem)] items-center ${className}`}>
+<div
+    class={`grid grid-cols-[auto_repeat(10,2.5rem)] items-center ${className}`}
+    onpointerleave={onPointerLeave}
+    role="application"
+    aria-label="Game board"
+    tabindex="-1"
+>
     <!-- Empty left corner space -->
     <div></div>
 
@@ -129,12 +141,14 @@
                 `}
                 disabled={!clickable || !isCellClickable(cell)}
                 aria-label={`Cell ${rowIndex}, ${colIndex} - ${cell.type}`}
-                onclick={() => handleClick({ row: rowIndex, col: colIndex })}
                 oncontextmenu={(e) => {
                     e.preventDefault();
                     onRightClick?.({ row: rowIndex, col: colIndex });
                 }}
-                onmouseenter={() => onCellHover?.({ row: rowIndex, col: colIndex })}
+                onclick={() => handleClick({ row: rowIndex, col: colIndex })}
+                onpointerenter={() => onPointerEnter?.({ row: rowIndex, col: colIndex })}
+                onpointerup={() => onPointerUp?.()}
+                onpointerdown={() => onPointerDown?.({ row: rowIndex, col: colIndex })}
             ></button>
         {/each}
     {/each}
