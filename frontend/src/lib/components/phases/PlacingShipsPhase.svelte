@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
     import { sendWS } from '$lib/api/websocket';
     import { gameStore } from '$lib/stores/game';
     import Board from '$lib/components/Board.svelte';
@@ -10,11 +9,10 @@
         ShipType,
         Coord,
         PreviewBoard,
-        PreviewCell,
-        Direction,
-        CellView
+        Direction
     } from '$lib/types';
     import { isWithinBounds } from '$lib/game/utils';
+    import Icon from '@iconify/svelte';
 
     const ships: ShipType[] = ['carrier', 'battleship', 'destroyer', 'submarine', 'patrolboat'];
 
@@ -93,10 +91,6 @@
             }
         }
         return { cells };
-    });
-
-    onMount(() => {
-        generateRandomFleet();
     });
 
     $effect(() => {
@@ -308,43 +302,94 @@
     onpointerup={handleDrop}
 />
 
-<div class="flex flex-col items-center gap-6">
-    <h2 class="text-xl font-semibold">Place your fleet</h2>
+<div class="flex h-full w-full">
+    <!-- Board controls -->
+    <div class="flex flex-1 items-start justify-center">
+        <div class="flex scale-100 flex-col items-center gap-8 pt-8 2xl:scale-105">
+            <div class="flex flex-col items-center gap-2">
+                <h1 class="text-2xl font-semibold tracking-wide uppercase">PREVIEW BOARD</h1>
+                <p class="text-xs tracking-widest uppercase">PLACE SHIPS TO THE BOARD TO BEGIN</p>
+            </div>
 
-    <!-- Board Preview -->
-    <div>
-        <h3 class="mb-2 text-lg font-medium">Preview Board</h3>
-        <Board
-            board={previewBoard}
-            clickable={!$gameStore.game?.player_ready}
-            onRightClick={handleRightClick}
-            onPointerEnter={handleHover}
-            onPointerUp={handleDrop}
-            onPointerDown={handleDrag}
-            onPointerLeave={handleLeave}
-        />
+            <!-- Board Preview -->
+            <Board
+                board={previewBoard}
+                clickable={!$gameStore.game?.player_ready}
+                onRightClick={handleRightClick}
+                onPointerEnter={handleHover}
+                onPointerUp={handleDrop}
+                onPointerDown={handleDrag}
+                onPointerLeave={handleLeave}
+            />
+
+            <!-- Controls-->
+            <div class="flex gap-4">
+                <button
+                    class="flex items-center gap-3 rounded-md border px-4 py-2 disabled:opacity-50"
+                    onclick={placeFleet}
+                    disabled={placements.length !== TOTAL_SHIPS || $gameStore.game?.player_ready}
+                >
+                    <Icon icon="material-symbols:check-circle-rounded" width="20" height="20" />
+                    {isWaiting ? 'Placement Confirmed' : 'Confirm Placement'}
+                </button>
+                <button
+                    class="flex items-center gap-3 rounded border px-4 py-2"
+                    onclick={handleReset}
+                >
+                    <Icon icon="ri:reset-left-fill" width="20" height="20" />
+                    Reset Board
+                </button>
+                <button
+                    class="flex items-center gap-3 rounded border px-4 py-2"
+                    onclick={generateRandomFleet}
+                >
+                    <Icon icon="material-symbols:shuffle-rounded" width="20" height="20" />
+                    Randomize
+                </button>
+            </div>
+        </div>
     </div>
 
-    <!-- Controls-->
-    <div class="flex gap-4">
-        <button class="rounded bg-blue-500 px-4 py-2 text-white" onclick={generateRandomFleet}>
-            Randomize Fleet
-        </button>
-        <button
-            class="rounded bg-green-500 px-4 py-2 text-white disabled:opacity-50"
-            onclick={placeFleet}
-            disabled={placements.length !== TOTAL_SHIPS || $gameStore.game?.player_ready}
-        >
-            {isWaiting ? 'Waiting for Opponent...' : 'Confirm Placement'}
-        </button>
-    </div>
+    <!-- Fleet panel -->
+    <div class="flex h-full w-90 shrink-0 flex-col gap-6 border border-neutral-500/80 p-6">
+        <h1 class="text-xl font-semibold tracking-tight uppercase">FLEET DEPLOYMENT</h1>
+        <div class="grid grid-cols-1 gap-4">
+            {#each ships as ship (ship)}
+                {@const isDragging = dragState?.ship_type === ship}
 
-    <div>
-        {#if isWaiting}
-            <p>Waiting for opponent...</p>
-        {/if}
-        {#if $gameStore.game?.opponent_ready}
-            <p>Opponent ready</p>
-        {/if}
+                <button
+                    class={`flex flex-col gap-4 border border-neutral-600/50 px-4 py-4 select-none
+                    ${isPlaced(ship) || isDragging ? 'opacity-40' : 'cursor-grab hover:bg-gray-50'}`}
+                    onpointerdown={() => {
+                        if (isPlaced(ship)) return;
+                        startDrag(ship);
+                    }}
+                >
+                    <div class="flex justify-between text-xs">
+                        <span class="font-semibold tracking-wider uppercase">{ship}</span>
+                        <span class="text-[0.7rem] tracking-tighter opacity-50"
+                            >SIZE: {SHIP_LENGTHS[ship]}</span
+                        >
+                    </div>
+
+                    <!-- Ship bar -->
+                    <div class="flex gap-2">
+                        {#each Array(SHIP_LENGTHS[ship]) as _, i (i)}
+                            <div class="h-4 w-15 border-2 border-indigo-500 bg-indigo-500/80"></div>
+                        {/each}
+                    </div>
+                </button>
+            {/each}
+        </div>
+        <!-- Progress bar -->
+        <div class="mt-auto flex flex-col gap-1">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xs tracking-wide uppercase">DEPLOYMENT PROGRESS</h3>
+                <h2 class="text-sm font-semibold">{progress}%</h2>
+            </div>
+            <div class="h-1 w-full bg-gray-300">
+                <div class="h-1 bg-indigo-500 transition-all" style={`width: ${progress}%`}></div>
+            </div>
+        </div>
     </div>
 </div>
