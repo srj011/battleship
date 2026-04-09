@@ -86,6 +86,8 @@ export type GameState = {
     opponent_fleet: FleetView;
     player_ready: boolean;
     opponent_ready: boolean;
+    player_rematch_ready: boolean;
+    opponent_rematch_ready: boolean;
 };
 
 export type GameUpdate = {
@@ -126,5 +128,9 @@ export type FireMessage = {
     coord: Coord;
 };
 
-export type ClientMessage = RandomFleetMessage | PlaceFleetMessage | FireMessage;
+export type RestartMessage = {
+    type: 'restart';
+};
+
+export type ClientMessage = RandomFleetMessage | PlaceFleetMessage | FireMessage | RestartMessage;
 /* ----------------------------------------------------------------------------------- */
