@@ -5,13 +5,17 @@ type GameStore = {
     game: GameState | null;
     randomFleet: ShipPlacement[] | null;
     connected: boolean;
+    reconnecting: boolean;
+    reconnectAttempts: number;
 };
 
 function createGameStore() {
     const { subscribe, update, set } = writable<GameStore>({
         game: null,
         randomFleet: null,
-        connected: false
+        connected: false,
+        reconnecting: false,
+        reconnectAttempts: 0
     });
 
     function applyGameUpdate(msg: GameUpdate) {
@@ -55,7 +59,18 @@ function createGameStore() {
         applyGameUpdate,
         setRandomFleet: (fleet: ShipPlacement[]) => update((s) => ({ ...s, randomFleet: fleet })),
         setConnected: (val: boolean) => update((s) => ({ ...s, connected: val })),
-        reset: () => set({ game: null, randomFleet: null, connected: false })
+        setReconnecting: (val: boolean) => update((s) => ({ ...s, reconnecting: val })),
+        incrementReconnectAttempts: () =>
+            update((s) => ({ ...s, reconnectAttempts: s.reconnectAttempts + 1 })),
+        resetReconnectAttempts: () => update((s) => ({ ...s, reconnectAttempts: 0 })),
+        reset: () =>
+            set({
+                game: null,
+                randomFleet: null,
+                connected: false,
+                reconnecting: false,
+                reconnectAttempts: 0
+            })
     };
 }
 
