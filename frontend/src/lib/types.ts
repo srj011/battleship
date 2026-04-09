@@ -84,6 +84,7 @@ export type GameState = {
     opponent_board: BoardView;
     player_fleet: FleetView;
     opponent_fleet: FleetView;
+    opponent_joined: boolean;
     player_ready: boolean;
     opponent_ready: boolean;
     player_rematch_ready: boolean;

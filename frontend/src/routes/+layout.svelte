@@ -16,7 +16,12 @@
         checkHealth();
     });
 
+    const phase = $derived($gameStore.game?.status.type);
+
     let copied = $state(false);
+
+    const opponent_ready = $derived($gameStore.game?.opponent_ready);
+    const opponent_joined = $derived($gameStore.game?.opponent_joined);
 
     function copyGameLink() {
         const value = page.params.code ?? '';
@@ -39,7 +44,25 @@
     <header class="bg-gray-900 text-white">
         <div class="grid grid-cols-3 items-center px-6 py-3">
             <!-- Left -->
-            <h1 class="justify-self-start text-lg font-semibold uppercase">BATTLESHIP</h1>
+            <div class="flex items-center gap-4">
+                <h1 class="justify-self-start text-lg font-semibold uppercase">BATTLESHIP</h1>
+
+                {#if page.params.code}
+                    <!-- Divider -->
+                    <div class="h-3 w-px bg-white/20"></div>
+
+                    <div class="flex gap-1 text-xs font-semibold tracking-wider text-gray-400">
+                        PHASE:
+                        <span>
+                            {phase === 'placing_ships'
+                                ? 'SHIP PLACEMENT'
+                                : phase === 'ongoing'
+                                  ? 'ONGOING'
+                                  : 'FINISHED'}
+                        </span>
+                    </div>
+                {/if}
+            </div>
 
             <!-- Center -->
             <div class="items-center justify-self-center">
@@ -47,7 +70,7 @@
                     <button
                         class="flex cursor-pointer items-center gap-1
                         border border-neutral-600 px-3 py-1
-                        text-xs tracking-widest uppercase select-none"
+                        text-xs tracking-widest select-none"
                         onclick={copyGameLink}
                         disabled={copied}
                         title="Click to Copy"
@@ -61,29 +84,55 @@
             </div>
 
             <!-- Right -->
-            <div class="flex items-center gap-3 justify-self-end">
+            <div class="flex items-center gap-10 justify-self-end">
+                <div class="flex items-center gap-3 text-xs tracking-wider">
+                    <div class="flex items-center gap-2 font-semibold text-gray-400 uppercase">
+                        {#if page.params.code}
+                            {#if opponent_joined}
+                                {#if opponent_ready}
+                                    <Icon
+                                        icon="material-symbols:check-circle-rounded"
+                                        width="15"
+                                        height="15"
+                                    />
+                                    <span>OPPONENT: READY</span>
+                                {:else}
+                                    <Icon icon="mdi:hourglass" font-size="15" />
+                                    <span>OPPONENT: PLACING</span>
+                                {/if}
+                            {:else}
+                                <Icon icon="mdi:hourglass" font-size="15" />
+                                <span>OPPONENT: NOT JOINED</span>
+                            {/if}
+                        {/if}
+                    </div>
+
+                    {#if page.params.code}
+                        <!-- Divider -->
+                        <div class="h-4 w-px bg-white/20"></div>
+                    {/if}
+
+                    <div class="flex items-center gap-1 font-semibold text-gray-300 uppercase">
+                        <Icon icon="fluent-mdl2:status-circle-sync" font-size="25" />
+                        <span>SERVER:</span>
+                        <span
+                            >{$apiHealth === 'checking'
+                                ? 'CHECKING'
+                                : $apiHealth === 'online'
+                                  ? 'ONLINE'
+                                  : 'OFFLINE'}</span
+                        >
+                    </div>
+                </div>
                 {#if page.params.code}
                     <button
-                        class="cursor-pointer border border-red-500/50 px-3 py-2
-                        text-xs font-semibold text-red-500 uppercase"
+                        class="cursor-pointer rounded-sm border border-red-500/50 bg-red-500/70 px-3 py-2
+                        text-xs font-semibold text-gray-100 uppercase"
                         onclick={handleLeave}
                     >
                         LEAVE GAME
                     </button>
                 {/if}
-                <div class="flex items-center gap-2 text-sm text-gray-300 uppercase">
-                    <span class="text-[0.8rem] font-semibold">STATUS:</span>
-                    <div
-                        title={$apiHealth}
-                        class={`h-3 w-3 rounded-full ${
-                            $apiHealth === 'checking'
-                                ? 'bg-yellow-400'
-                                : $apiHealth === 'online'
-                                  ? 'bg-green-500'
-                                  : 'bg-red-500'
-                        }`}
-                    ></div>
-                </div>
             </div>
         </div>
     </header>
