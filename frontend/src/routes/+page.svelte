@@ -56,7 +56,7 @@
     <section class="grid w-full max-w-3xl grid-cols-2 gap-4">
         <!-- Play vs AI -->
         <button
-            class="flex cursor-pointer items-center justify-between border px-6 py-5"
+            class="flex cursor-pointer items-center justify-between border border-neutral-800 px-6 py-5"
             onclick={() => handleCreate('ai')}
             disabled={loading}
         >
@@ -68,7 +68,7 @@
 
         <!-- Quick Match -->
         <button
-            class="flex cursor-pointer items-center justify-between border px-6 py-5"
+            class="flex cursor-not-allowed items-center justify-between border border-neutral-800 px-6 py-5"
             disabled={loading}
         >
             <div class="flex items-center gap-4 text-left">
@@ -79,7 +79,7 @@
 
         <!-- Host Game -->
         <button
-            class="flex cursor-pointer items-center justify-between border px-6 py-5"
+            class="flex cursor-pointer items-center justify-between border border-neutral-800 px-6 py-5"
             onclick={() => handleCreate('multiplayer')}
             disabled={loading}
         >
@@ -90,7 +90,7 @@
         </button>
 
         <!-- Join Game -->
-        <div class="flex items-center border px-6 py-5">
+        <div class="flex items-center border border-neutral-800 px-6 py-5">
             <form
                 onsubmit={(e) => {
                     e.preventDefault();

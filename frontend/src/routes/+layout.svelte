@@ -80,7 +80,7 @@
                         <span class="opacity-60">CODE:</span>
                         <span class="font-mono text-sm">{copied ? 'COPIED' : page.params.code}</span
                         >
-                        <Icon icon="material-symbols:content-copy-rounded" class="h-4 w-4" />
+                        <Icon icon="material-symbols:content-copy-rounded" width="16" height="16" />
                     </button>
                 {/if}
             </div>
@@ -99,7 +99,7 @@
                                     />
                                     <span>OPPONENT: READY</span>
                                 {:else}
-                                    <Icon icon="mdi:hourglass" font-size="15" />
+                                    <Icon icon="mdi:hourglass" width="15" />
                                     <span>OPPONENT: PLACING</span>
                                 {/if}
                             {:else}
