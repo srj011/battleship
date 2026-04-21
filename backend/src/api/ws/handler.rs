@@ -339,7 +339,8 @@ async fn handle_rematch(
 }
 
 fn map_error_to_message(e: ApiError) -> ServerMessage {
-    let (_, message) = e.status_message();
+    let (_, response) = e.to_response();
+    let message = response.message;
 
     ServerMessage::Error {
         message: message.to_string(),
