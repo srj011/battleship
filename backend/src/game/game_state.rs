@@ -27,6 +27,7 @@ pub enum GameStatus {
     PlacingShips,
     Ongoing,
     Finished { winner: Turn },
+    Abandoned { winner: Option<Turn> },
 }
 
 pub struct GameState {
@@ -52,6 +53,10 @@ impl GameState {
 
     pub fn status(&self) -> GameStatus {
         self.status
+    }
+
+    pub fn set_status(&mut self, status: GameStatus) {
+        self.status = status;
     }
 
     pub fn current_turn(&self) -> Turn {
@@ -105,7 +110,7 @@ impl GameState {
         }
 
         if self.player1_ready && self.player2_ready {
-            self.status = GameStatus::Ongoing
+            self.set_status(GameStatus::Ongoing);
         }
 
         Ok(())
@@ -131,9 +136,9 @@ impl GameState {
         };
 
         if opponent_lost {
-            self.status = GameStatus::Finished {
+            self.set_status(GameStatus::Finished {
                 winner: self.current_turn,
-            };
+            });
             return Ok(result);
         }
 

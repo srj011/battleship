@@ -162,6 +162,18 @@ async fn handle_socket(
                                 }
                             }
 
+                            Ok(ClientMessage::LeaveGame) => {
+                                {
+                                    let mut session = session_arc.lock().unwrap();
+                                    session.handle_leave(player);
+                                }
+
+                                if let Err(e) = sender.close().await {
+                                    debug!(?e, "failed to close socket");
+                                }
+                                return;
+                            }
+
                             Err(err) => {
                                 eprintln!("Invalid message: {err}");
                             }
@@ -173,7 +185,40 @@ async fn handle_socket(
                         break;
                     },
                     None => {
-                        eprintln!("[WS] client disconnected");
+                        info!(event = "disconnected");
+
+                        {
+                            let mut session = session_arc.lock().unwrap();
+                            if matches!(
+                                session.status(),
+                                GameStatus::Finished{ .. } | GameStatus::Abandoned{ .. }
+                            ) {
+                                session.handle_leave(player);
+                                break;
+                            }
+                        }
+
+                        let spawned_at = {
+                            let mut session = session_arc.lock().unwrap();
+                            session.mark_disconnected(player);
+                            session.disconnected_at(player).unwrap()
+                        };
+
+                        let session_clone = session_arc.clone();
+
+                        info!(event = "abandon_timer_started", timeout = 30);
+                        tokio::spawn(async move {
+                            time::sleep(Duration::from_secs(30)).await;
+
+                            let mut session = session_clone.lock().unwrap();
+
+                            if let Some(disconnected_at) = session.disconnected_at(player) {
+                                if spawned_at == disconnected_at {
+                                    session.handle_leave(player);
+                                }
+                            }
+                        });
+
                         break;
                     }
                 }

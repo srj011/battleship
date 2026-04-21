@@ -12,7 +12,7 @@ pub enum ClientMessage {
     Fire { coord: ApiCoord },
     RandomFleet,
     PlaceFleet { fleet: Vec<ApiShipPlacement> },
-    Restart,
+    LeaveGame,
 }
 
 #[derive(Debug, Serialize)]

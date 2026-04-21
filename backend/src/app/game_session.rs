@@ -335,6 +335,46 @@ impl GameSession {
         Ok(())
     }
 
+    pub fn handle_leave(&mut self, player: Turn) {
+        self.touch();
+        self.handle_abandon(player);
+        self.remove_player(player);
+        self.send_broadcast(GameUpdate::StateChanged);
+    }
+
+    fn remove_player(&mut self, player: Turn) {
+        match player {
+            Turn::Player1 => {
+                if let PlayerSlot::Human { .. } = self.player1 {
+                    self.player1 = PlayerSlot::Empty;
+                }
+            }
+            Turn::Player2 => {
+                if let PlayerSlot::Human { .. } = self.player2 {
+                    self.player2 = PlayerSlot::Empty;
+                }
+            }
+        }
+        info!(event = "player_left", ?player);
+    }
+
+    fn handle_abandon(&mut self, leaver: Turn) {
+        match self.game.status() {
+            GameStatus::Ongoing => {
+                let winner = leaver.opponent();
+
+                self.game.set_status(GameStatus::Abandoned {
+                    winner: Some(winner),
+                });
+                info!(event = "abandoned_match", player = ?leaver);
+            }
+            GameStatus::PlacingShips => {
+                self.game.set_status(GameStatus::Abandoned { winner: None });
+            }
+            _ => {}
+        }
+    }
+
     fn record_turn(&mut self, player: Turn, coord: Coord) -> Result<TurnEvent, GameError> {
         let outcome = self.game.take_turn(coord)?;
         let event = TurnEvent::new(player, coord, outcome);
