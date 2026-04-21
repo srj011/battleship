@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::api::types::{ApiCoord, ApiShipPlacement};
 use crate::app::board_view::BoardView;
 use crate::app::fleet_view::FleetView;
-use crate::app::game_session::TurnEvent;
+use crate::app::game_session::{DisconnectInfo, TurnEvent};
 use crate::game::game_state::{GameStatus, Turn};
 
 #[derive(Debug, Deserialize)]
@@ -38,6 +38,14 @@ pub enum ServerMessage {
         status: GameStatus,
         player_board: BoardView,
         opponent_board: BoardView,
+    },
+
+    PlayerDisconnected {
+        info: DisconnectInfo,
+    },
+
+    PlayerReconnected {
+        player: Turn,
     },
 
     RandomFleet {

@@ -7,6 +7,7 @@ use axum::{
 };
 use futures::{SinkExt, StreamExt};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::sync::broadcast;
 
 use crate::api::errors::ApiError;
@@ -82,7 +83,21 @@ async fn handle_socket(
         }
     };
 
-    eprintln!("[WS] Connected: {game_code} as {player:?}");
+    let is_reconnect = {
+        let mut session = session_arc.lock().unwrap();
+        if session.is_disconnected(player) {
+            session.mark_reconnected(player);
+            true
+        } else {
+            false
+        }
+    };
+
+    if is_reconnect {
+        eprintln!("[WS] Connected: {game_code} as {player:?}");
+    } else {
+        eprintln!("[WS] Reconnected: {game_code} as {player:?}");
+    }
 
     // Initial message
     let initial_message = {
@@ -253,7 +268,11 @@ async fn handle_socket(
                                     status: session.status(),
                                     player_board: snapshot.player_board,
                                     opponent_board: snapshot.opponent_board,
-                                }
+                                },
+
+                                GameUpdate::PlayerDisconnected{ info } => ServerMessage::PlayerDisconnected { info },
+
+                                GameUpdate::PlayerReconnected{ player } => ServerMessage::PlayerReconnected { player },
                             }
                         };
 

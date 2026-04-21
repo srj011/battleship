@@ -1,4 +1,6 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
@@ -50,6 +52,8 @@ pub struct GameSnapshot {
 pub enum GameUpdate {
     StateChanged,
     ShotFired { event: TurnEvent },
+    PlayerDisconnected { info: DisconnectInfo },
+    PlayerReconnected { player: Turn },
 }
 
 #[derive(Debug)]
@@ -57,6 +61,12 @@ pub enum PlayerSlot {
     Empty,
     Human { token: Uuid },
     AI,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DisconnectInfo {
+    player: Turn,
+    disconnected_at: u64,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -77,6 +87,7 @@ pub struct GameSession {
     tx: broadcast::Sender<GameUpdate>,
     player1_wants_rematch: bool,
     player2_wants_rematch: bool,
+    disconnected: HashMap<Turn, Instant>,
 }
 
 impl GameSession {
@@ -118,6 +129,7 @@ impl GameSession {
                 tx,
                 player1_wants_rematch: false,
                 player2_wants_rematch: false,
+                disconnected: HashMap::with_capacity(2),
             },
             player1_token,
         )
@@ -213,6 +225,40 @@ impl GameSession {
             Turn::Player1 => (self.game.player1_ready(), self.game.player2_ready()),
             Turn::Player2 => (self.game.player2_ready(), self.game.player1_ready()),
         }
+    }
+
+    pub fn mark_disconnected(&mut self, player: Turn) {
+        if self.is_disconnected(player) {
+            return;
+        }
+
+        self.disconnected.insert(player, Instant::now());
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+
+        self.send_broadcast(GameUpdate::PlayerDisconnected {
+            info: DisconnectInfo {
+                player,
+                disconnected_at: now,
+            },
+        });
+    }
+
+    pub fn mark_reconnected(&mut self, player: Turn) {
+        if self.disconnected.remove(&player).is_some() {
+            self.send_broadcast(GameUpdate::PlayerReconnected { player });
+            self.send_broadcast(GameUpdate::StateChanged);
+        }
+    }
+
+    pub fn is_disconnected(&self, player: Turn) -> bool {
+        self.disconnected.contains_key(&player)
+    }
+
+    pub fn disconnected_at(&self, player: Turn) -> Option<Instant> {
+        self.disconnected.get(&player).cloned()
     }
 
     pub fn join_player(&mut self) -> Result<Uuid, GameError> {
