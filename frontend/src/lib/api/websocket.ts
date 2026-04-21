@@ -1,4 +1,6 @@
+/* eslint-disable no-console */
 import { gameStore } from '$lib/stores/game';
+import { get } from 'svelte/store';
 import type { ClientMessage, ServerMessage } from '$lib/types';
 
 let socket: WebSocket | null = null;
@@ -6,9 +8,6 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
 let currentCode: string | null = null;
 let currentToken: string | null = null;
-
-let reconnectAttempts = 0;
-let manuallyDisconnected = false;
 
 const MAX_RECONNECT_ATTEMPTS = 10;
 
@@ -21,7 +20,6 @@ function getReconnectDelay(attempt: number): number {
 export function connectWS(code: string, token: string) {
     currentCode = code;
     currentToken = token;
-    manuallyDisconnected = false;
 
     if (reconnectTimer) {
         clearTimeout(reconnectTimer);
@@ -29,28 +27,39 @@ export function connectWS(code: string, token: string) {
     }
 
     if (socket) {
+        if (socket.readyState !== WebSocket.CLOSED) {
+            console.warn('[WS] Already connecting/connected');
+            return;
+        }
         socket.close();
+        socket = null;
     }
 
     const url = `ws://localhost:3000/api/v1/game/${code}/ws?player_token=${token}`;
     socket = new WebSocket(url);
 
+    if (get(gameStore).connection.state !== 'reconnecting') {
+        gameStore.dispatch({ type: 'CONNECT' });
+    }
+
     socket.onopen = () => {
         console.log('[WS] Connected');
 
-        reconnectAttempts = 0;
-        gameStore.setConnected(true);
-        gameStore.setReconnecting(false);
-        gameStore.resetReconnectAttempts();
+        gameStore.dispatch({ type: 'CONNECTED' });
     };
 
     socket.onclose = (event) => {
         console.log('[WS] Disconnected', event.code);
 
-        gameStore.setConnected(false);
         socket = null;
+        const connection = get(gameStore).connection;
 
-        if (manuallyDisconnected || event.code === 1000) {
+        if (
+            connection.state === 'idle' ||
+            connection.state === 'unreachable' ||
+            connection.state === 'invalid-session' ||
+            event.code === 1000
+        ) {
             return;
         }
 
@@ -90,21 +99,42 @@ export function connectWS(code: string, token: string) {
 function scheduleReconnect() {
     if (!currentCode || !currentToken) return;
 
-    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.error('[WS] Max reconnect attempts reached');
-        gameStore.setReconnecting(false);
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+    }
+
+    let connection = get(gameStore).connection;
+
+    if (connection.state !== 'reconnecting') {
         return;
     }
 
-    const delay = getReconnectDelay(reconnectAttempts);
+    if (connection.attempt >= MAX_RECONNECT_ATTEMPTS) {
+        console.error('[WS] Max reconnect attempts reached');
+        gameStore.dispatch({ type: 'MAX_RETRIES' });
+        return;
+    }
 
-    gameStore.setReconnecting(true);
+    gameStore.dispatch({ type: 'RETRY' });
 
-    console.log(`[WS] Reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempts + 1})`);
+    connection = get(gameStore).connection;
+    const delay = getReconnectDelay(connection.attempt);
+
+    console.log(`[WS] Reconnecting in ${Math.round(delay)}ms (attempt ${connection.attempt})`);
 
     reconnectTimer = setTimeout(() => {
-        reconnectAttempts++;
-        gameStore.incrementReconnectAttempts();
+        connection = get(gameStore).connection;
+        if (connection.state !== 'reconnecting') {
+            return;
+        }
+
+        if (!currentCode || !currentToken) {
+            return;
+        }
+
+        console.log(`[WS] Reconnecting... (attempt ${connection.attempt})`);
+
         connectWS(currentCode!, currentToken!);
     }, delay);
 }
@@ -119,12 +149,14 @@ export function sendWS(message: ClientMessage) {
 }
 
 export function disconnectWS() {
-    manuallyDisconnected = true;
+    socket?.close(1000, 'Manual disconnect');
+    socket = null;
 
     if (reconnectTimer) {
         clearTimeout(reconnectTimer);
         reconnectTimer = null;
     }
+}
 
     socket?.close(1000, 'Manual disconnect');
     socket = null;
@@ -137,10 +169,10 @@ if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
         if (
             document.visibilityState === 'visible' &&
-            !socket &&
+            (!socket || socket.readyState === WebSocket.CLOSED) &&
             currentCode &&
             currentToken &&
-            !manuallyDisconnected
+            get(gameStore).connection.state === 'reconnecting'
         ) {
             console.log('[WS] Tab active -> reconnecting');
             connectWS(currentCode, currentToken);

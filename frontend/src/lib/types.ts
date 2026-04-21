@@ -135,3 +135,25 @@ export type RestartMessage = {
 
 export type ClientMessage = RandomFleetMessage | PlaceFleetMessage | FireMessage | RestartMessage;
 /* ----------------------------------------------------------------------------------- */
+
+export type ConnectionState =
+    | 'idle'
+    | 'connecting'
+    | 'connected'
+    | 'reconnecting'
+    | 'unreachable'
+    | 'invalid-session';
+
+export type Connection = {
+    state: ConnectionState;
+    attempt: number;
+};
+
+export type Event =
+    | { type: 'CONNECT' }
+    | { type: 'CONNECTED' }
+    | { type: 'DISCONNECTED' }
+    | { type: 'RETRY' }
+    | { type: 'MAX_RETRIES' }
+    | { type: 'INVALID_SESSION' }
+    | { type: 'LEAVE' };

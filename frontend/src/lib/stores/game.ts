@@ -1,21 +1,23 @@
-import type { GameState, GameUpdate, ShipPlacement } from '$lib/types';
+import type {
+    GameState,
+    GameUpdate,
+    ShipPlacement,
+    Connection,
+    Event
+} from '$lib/types';
 import { writable } from 'svelte/store';
 
 type GameStore = {
     game: GameState | null;
     randomFleet: ShipPlacement[] | null;
-    connected: boolean;
-    reconnecting: boolean;
-    reconnectAttempts: number;
+    connection: Connection;
 };
 
 function createGameStore() {
     const { subscribe, update, set } = writable<GameStore>({
         game: null,
         randomFleet: null,
-        connected: false,
-        reconnecting: false,
-        reconnectAttempts: 0
+        connection: { state: 'idle', attempt: 0 },
     });
 
     function applyGameUpdate(msg: GameUpdate) {
@@ -53,23 +55,87 @@ function createGameStore() {
         });
     }
 
+    function connectionReducer(state: Connection, event: Event): Connection {
+        switch (state.state) {
+            case 'idle':
+                if (event.type === 'CONNECT') {
+                    return { state: 'connecting', attempt: 0 };
+                }
+                return state;
+
+            case 'connecting':
+                switch (event.type) {
+                    case 'CONNECTED':
+                        return { state: 'connected', attempt: 0 };
+                    case 'INVALID_SESSION':
+                        return { state: 'invalid-session', attempt: 0 };
+                    case 'DISCONNECTED':
+                        return { state: 'reconnecting', attempt: 0 };
+                    default:
+                        return state;
+                }
+
+            case 'connected':
+                if (event.type === 'DISCONNECTED') {
+                    return { state: 'reconnecting', attempt: 0 };
+                }
+                if (event.type === 'LEAVE') {
+                    return { state: 'idle', attempt: 0 };
+                }
+                return state;
+
+            case 'reconnecting':
+                switch (event.type) {
+                    case 'CONNECTED':
+                        return { state: 'connected', attempt: 0 };
+                    case 'RETRY':
+                        return {
+                            state: 'reconnecting',
+                            attempt: state.attempt + 1
+                        };
+                    case 'MAX_RETRIES':
+                        return { state: 'unreachable', attempt: state.attempt };
+                    case 'LEAVE':
+                        return { state: 'idle', attempt: 0 };
+                    default:
+                        return state;
+                }
+
+            case 'unreachable':
+                if (event.type === 'RETRY') {
+                    return { state: 'reconnecting', attempt: 0 };
+                }
+                if (event.type === 'LEAVE') {
+                    return { state: 'idle', attempt: 0 };
+                }
+                return state;
+
+            case 'invalid-session':
+                if (event.type === 'LEAVE') {
+                    return { state: 'idle', attempt: 0 };
+                }
+                return state;
+        }
+    }
+
+    function dispatch(event: Event) {
+        update((s) => ({
+            ...s,
+            connection: connectionReducer(s.connection, event)
+        }));
+    }
+
     return {
         subscribe,
+        dispatch,
         setGame: (game: GameState) => update((s) => ({ ...s, game })),
         applyGameUpdate,
         setRandomFleet: (fleet: ShipPlacement[]) => update((s) => ({ ...s, randomFleet: fleet })),
-        setConnected: (val: boolean) => update((s) => ({ ...s, connected: val })),
-        setReconnecting: (val: boolean) => update((s) => ({ ...s, reconnecting: val })),
-        incrementReconnectAttempts: () =>
-            update((s) => ({ ...s, reconnectAttempts: s.reconnectAttempts + 1 })),
-        resetReconnectAttempts: () => update((s) => ({ ...s, reconnectAttempts: 0 })),
         reset: () =>
             set({
                 game: null,
                 randomFleet: null,
-                connected: false,
-                reconnecting: false,
-                reconnectAttempts: 0
+                connection: { state: 'idle', attempt: 0 },
             })
     };
 }
