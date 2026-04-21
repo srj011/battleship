@@ -220,6 +220,12 @@ impl GameSession {
         self.tx.subscribe()
     }
 
+    fn send_broadcast(&self, msg: GameUpdate) {
+        if let Err(e) = self.tx.send(msg.clone()) {
+            warn!(error = ?e, broadcast = ?msg, "broadcast failed");
+        }
+    }
+
     pub fn ready_status(&self, player: Turn) -> (bool, bool) {
         match player {
             Turn::Player1 => (self.game.player1_ready(), self.game.player2_ready()),
@@ -268,6 +274,8 @@ impl GameSession {
                 self.player2 = PlayerSlot::Human {
                     token: player_token,
                 };
+
+                self.send_broadcast(GameUpdate::StateChanged);
                 Ok(player_token)
             }
             _ => Err(GameError::GameFull),
@@ -310,7 +318,7 @@ impl GameSession {
     ) -> Result<(), GameError> {
         self.game.place_fleet(player, placements)?;
 
-        let _ = self.tx.send(GameUpdate::StateChanged);
+        self.send_broadcast(GameUpdate::StateChanged);
         Ok(())
     }
 
@@ -341,7 +349,7 @@ impl GameSession {
 
         let event = self.record_turn(acting_player, coord)?;
 
-        let _ = self.tx.send(GameUpdate::ShotFired {
+        self.send_broadcast(GameUpdate::ShotFired {
             event: event.clone(),
         });
         Ok(event)
