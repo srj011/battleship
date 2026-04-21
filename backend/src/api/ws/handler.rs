@@ -98,7 +98,7 @@ async fn handle_socket(
         let session = session_arc.lock().unwrap();
         let snapshot = session.snapshot_for(player);
         let (player_ready, opponent_ready) = session.ready_status(player);
-        let (player_rematch_ready, opponent_rematch_ready) = session.rematch_status(player);
+        let rematch_state = session.rematch_state();
 
         ServerMessage::GameState {
             player,
@@ -111,8 +111,7 @@ async fn handle_socket(
             opponent_joined: snapshot.opponent_joined,
             player_ready,
             opponent_ready,
-            player_rematch_ready,
-            opponent_rematch_ready,
+            rematch_state,
         }
     };
 
@@ -150,13 +149,25 @@ async fn handle_socket(
                                 }
                             },
 
-                            Ok(ClientMessage::Restart) => {
-                                eprintln!("[WS] Restart requested");
-                                if let Err(e) = handle_rematch(session_arc.clone(), player).await {
-                                    eprintln!("[WS] Restart error");
-                                    let server_msg = map_error_to_message(e);
+                            Ok(ClientMessage::RequestRematch) => {
+                                if let Err(err) = handle_rematch(session_arc.clone(), player).await {
+                                    let server_msg = map_error_to_message(err);
                                     let error_msg = to_ws_message(server_msg);
                                     send_ws(&mut sender, error_msg).await;
+                                }
+                            }
+
+                            Ok(ClientMessage::CancelRematch) => {
+                                {
+                                    let mut session = session_arc.lock().unwrap();
+                                    session.cancel_rematch(player);
+                                }
+                            }
+
+                            Ok(ClientMessage::RejectRematch) => {
+                                {
+                                    let mut session = session_arc.lock().unwrap();
+                                    session.reject_rematch(player);
                                 }
                             }
 
@@ -228,7 +239,7 @@ async fn handle_socket(
                             let session = session_arc.lock().unwrap();
                             let snapshot = session.snapshot_for(player);
                             let (player_ready, opponent_ready) = session.ready_status(player);
-                            let (player_rematch_ready, opponent_rematch_ready) = session.rematch_status(player);
+                            let rematch_state = session.rematch_state();
 
                             match update {
                                 GameUpdate::StateChanged => ServerMessage::GameState {
@@ -242,8 +253,7 @@ async fn handle_socket(
                                     opponent_joined: snapshot.opponent_joined,
                                     player_ready,
                                     opponent_ready,
-                                    player_rematch_ready,
-                                    opponent_rematch_ready,
+                                    rematch_state
                                 },
                                 GameUpdate::ShotFired{ event } => ServerMessage::GameUpdate {
                                     event,
@@ -256,6 +266,10 @@ async fn handle_socket(
                                 GameUpdate::PlayerDisconnected{ info } => ServerMessage::PlayerDisconnected { info },
 
                                 GameUpdate::PlayerReconnected{ player } => ServerMessage::PlayerReconnected { player },
+
+                                GameUpdate::RematchCancelled{ player } => ServerMessage::RematchCancelled { player },
+
+                                GameUpdate::RematchRejected{ player } => ServerMessage::RematchRejected { player }
                             }
                         };
 

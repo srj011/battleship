@@ -54,6 +54,8 @@ pub enum GameUpdate {
     ShotFired { event: TurnEvent },
     PlayerDisconnected { info: DisconnectInfo },
     PlayerReconnected { player: Turn },
+    RematchCancelled { player: Turn },
+    RematchRejected { player: Turn },
 }
 
 #[derive(Debug)]
@@ -76,6 +78,13 @@ pub enum GameMode {
     Multiplayer,
 }
 
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum RematchState {
+    Idle,
+    Requested { by: Turn },
+}
+
 pub struct GameSession {
     game_code: String,
     mode: GameMode,
@@ -85,8 +94,7 @@ pub struct GameSession {
     ai: Option<AiPlayer>,
     history: Vec<TurnEvent>,
     tx: broadcast::Sender<GameUpdate>,
-    player1_wants_rematch: bool,
-    player2_wants_rematch: bool,
+    rematch: RematchState,
     disconnected: HashMap<Turn, Instant>,
 }
 
@@ -127,8 +135,7 @@ impl GameSession {
                 ai,
                 history: Vec::new(),
                 tx,
-                player1_wants_rematch: false,
-                player2_wants_rematch: false,
+                rematch: RematchState::Idle,
                 disconnected: HashMap::with_capacity(2),
             },
             player1_token,
@@ -155,14 +162,14 @@ impl GameSession {
                 .expect("AI fleet placement failed");
         }
 
-        self.player1_wants_rematch = false;
-        self.player2_wants_rematch = false;
+        self.rematch = RematchState::Idle;
 
-        let _ = self.tx.send(GameUpdate::StateChanged);
+
+        self.send_broadcast(GameUpdate::StateChanged);
         Ok(())
     }
 
-    pub fn request_rematch(&mut self, player: Turn) -> Result<bool, GameError> {
+    pub fn request_rematch(&mut self, player: Turn) -> Result<(), GameError> {
         match self.game.status() {
             GameStatus::Finished { .. } | GameStatus::Abandoned { .. } => {}
             _ => return Err(GameError::InvalidGameState),
@@ -171,29 +178,52 @@ impl GameSession {
         // vs AI mode
         if self.ai.is_some() {
             self.restart_game()?;
-            return Ok(true);
+            return Ok(());
         }
 
         // Multiplayer mode
-        match player {
-            Turn::Player1 => self.player1_wants_rematch = true,
-            Turn::Player2 => self.player2_wants_rematch = true,
+        match self.rematch {
+            RematchState::Idle => {
+                self.rematch = RematchState::Requested { by: player };
+            }
+            RematchState::Requested { by } => {
+                if by != player {
+                    self.restart_game()?;
+                    return Ok(());
+                }
+            }
         }
+        self.send_broadcast(GameUpdate::StateChanged);
 
-        let both_ready = self.player1_wants_rematch && self.player2_wants_rematch;
-        if both_ready {
-            self.restart_game()?;
-        }
-
-        let _ = self.tx.send(GameUpdate::StateChanged);
-        Ok(both_ready)
+        Ok(())
     }
 
-    pub fn rematch_status(&self, player: Turn) -> (bool, bool) {
-        match player {
-            Turn::Player1 => (self.player1_wants_rematch, self.player2_wants_rematch),
-            Turn::Player2 => (self.player2_wants_rematch, self.player1_wants_rematch),
+    pub fn cancel_rematch(&mut self, player: Turn) {
+
+        if let RematchState::Requested { by } = self.rematch {
+            if by == player {
+                self.rematch = RematchState::Idle;
+
+                self.send_broadcast(GameUpdate::StateChanged);
+                self.send_broadcast(GameUpdate::RematchCancelled { player });
+            }
         }
+    }
+
+    pub fn reject_rematch(&mut self, player: Turn) {
+
+        if let RematchState::Requested { by } = self.rematch {
+            if by != player {
+                self.rematch = RematchState::Idle;
+
+                self.send_broadcast(GameUpdate::StateChanged);
+                self.send_broadcast(GameUpdate::RematchRejected { player });
+            }
+        }
+    }
+
+    pub fn rematch_state(&self) -> RematchState {
+        self.rematch
     }
 
     pub fn status(&self) -> GameStatus {

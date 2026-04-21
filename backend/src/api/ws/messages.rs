@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::api::types::{ApiCoord, ApiShipPlacement};
 use crate::app::board_view::BoardView;
 use crate::app::fleet_view::FleetView;
-use crate::app::game_session::{DisconnectInfo, TurnEvent};
+use crate::app::game_session::{DisconnectInfo, RematchState, TurnEvent};
 use crate::game::game_state::{GameStatus, Turn};
 
 #[derive(Debug, Deserialize)]
@@ -12,6 +12,9 @@ pub enum ClientMessage {
     Fire { coord: ApiCoord },
     RandomFleet,
     PlaceFleet { fleet: Vec<ApiShipPlacement> },
+    RequestRematch,
+    CancelRematch,
+    RejectRematch,
     LeaveGame,
 }
 
@@ -29,8 +32,7 @@ pub enum ServerMessage {
         opponent_joined: bool,
         player_ready: bool,
         opponent_ready: bool,
-        player_rematch_ready: bool,
-        opponent_rematch_ready: bool,
+        rematch_state: RematchState,
     },
     GameUpdate {
         event: TurnEvent,
@@ -52,9 +54,12 @@ pub enum ServerMessage {
         fleet: Vec<ApiShipPlacement>,
     },
 
-    RematchStatus {
-        self_ready: bool,
-        opponent_ready: bool,
+    RematchCancelled {
+        player: Turn,
+    },
+
+    RematchRejected {
+        player: Turn,
     },
 
     Error {
