@@ -25,7 +25,7 @@
     let copied = $state(false);
 
     const opponent_ready = $derived($gameStore.game?.opponent_ready);
-    const opponent_joined = $derived($gameStore.game?.opponent_joined);
+    const opponent_present = $derived($gameStore.game?.opponent_present);
 
     function copyGameLink() {
         const value = page.params.code ?? '';
@@ -33,11 +33,6 @@
 
         copied = true;
         setTimeout(() => (copied = false), 1500);
-    }
-
-    function handleLeave() {
-        gameStore.reset();
-        goto(resolve('/'));
     }
 </script>
 
@@ -94,7 +89,7 @@
                 <div class="flex items-center gap-3 text-xs tracking-wider">
                     <div class="flex items-center gap-2 font-semibold text-gray-400 uppercase">
                         {#if page.params.code}
-                            {#if opponent_joined}
+                            {#if opponent_present}
                                 {#if opponent_ready}
                                     <Icon
                                         icon="material-symbols:check-circle-rounded"
@@ -107,8 +102,12 @@
                                     <span>OPPONENT: PLACING</span>
                                 {/if}
                             {:else}
-                                <Icon icon="mdi:hourglass" font-size="15" />
-                                <span>OPPONENT: NOT JOINED</span>
+                                <Icon icon="mdi:hourglass" width="15" />
+                                {#if $gameStore.game?.status.type === 'placing_ships'}
+                                    <span>OPPONENT: NOT JOINED</span>
+                                {:else}
+                                    <span>OPPONENT: LEFT</span>
+                                {/if}
                             {/if}
                         {/if}
                     </div>

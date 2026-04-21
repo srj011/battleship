@@ -1,9 +1,10 @@
 <script lang="ts">
     import { gameStore } from '$lib/stores/game';
+    import { notificationStore } from '$lib/stores/notification';
     import { sendWS } from '$lib/api/websocket';
-    import type { ClientMessage } from '$lib/types';
     import Board from '$lib/components/game/Board.svelte';
     import Fleet from '$lib/components/game/Fleet.svelte';
+    import type { ClientMessage, Notification } from '$lib/types';
     import Icon from '@iconify/svelte';
     import RematchDialog from '$lib/components/RematchDialog.svelte';
 
@@ -15,8 +16,17 @@
         $gameStore.game.status.winner === $gameStore.game.player;
     const isAbandoned = $gameStore.game?.status.type === 'abandoned';
 
-    const rematchSelf = $derived($gameStore.game?.player_rematch_ready ?? false);
-    const rematchOpponent = $derived($gameStore.game?.opponent_rematch_ready ?? false);
+    const opponent_present = $derived($gameStore.game?.opponent_present);
+
+    $effect(() => {
+        if (!opponent_present) {
+            const notification: Omit<Notification, 'id'> = {
+                title: 'Opponent left',
+                type: 'info'
+            };
+            notificationStore.push(notification);
+        }
+    });
 
     function handleRematch() {
         const msg: ClientMessage = { type: 'request_rematch' };
@@ -55,6 +65,7 @@
                         class="cursor-pointer rounded-sm bg-gray-900/90 px-4
                         py-2 text-sm font-semibold text-white uppercase
                         hover:bg-gray-800/80"
+                        hidden={!opponent_present}
                         onclick={handleRematch}
                         disabled={$gameStore.game.rematch_state.type === 'requested'}
                     >

@@ -92,7 +92,7 @@ export type GameState = {
     opponent_board: BoardView;
     player_fleet: FleetView;
     opponent_fleet: FleetView;
-    opponent_joined: boolean;
+    opponent_present: boolean;
     player_ready: boolean;
     opponent_ready: boolean;
     rematch_state: RematchState;
@@ -211,3 +211,12 @@ export type Event =
     | { type: 'MAX_RETRIES' }
     | { type: 'INVALID_SESSION' }
     | { type: 'LEAVE' };
+
+export type NotificationType = 'info' | 'success' | 'error';
+
+export type Notification = {
+    id: string;
+    title: string;
+    message?: string;
+    type?: NotificationType;
+};
