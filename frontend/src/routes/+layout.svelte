@@ -19,6 +19,9 @@
 
     onMount(() => {
         checkHealth();
+
+        const interval = setInterval(() => checkHealth(), 5000);
+        return () => clearInterval(interval);
     });
 
     const phase = $derived($gameStore.game?.status.type);
