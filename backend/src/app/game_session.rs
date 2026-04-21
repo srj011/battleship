@@ -1,28 +1,31 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::app::board_view::{BoardPerspective, BoardView};
+use crate::app::fleet_view::{FleetPerspective, FleetView};
 use crate::game::ai::AiPlayer;
 use crate::game::coord::Coord;
 use crate::game::errors::GameError;
 use crate::game::game_state::{GameState, GameStatus, Turn};
-use crate::game::player::{Player, ShotResult};
+use crate::game::player::{Player, ShotOutcome, ShotResult};
 use crate::game::ship::ShipPlacement;
 
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct TurnEvent {
     player: Turn,
     coord: Coord,
-    result: ShotResult,
+    outcome: ShotOutcome,
 }
 
 impl TurnEvent {
-    pub fn new(player: Turn, coord: Coord, result: ShotResult) -> Self {
+    pub fn new(player: Turn, coord: Coord, outcome: ShotOutcome) -> Self {
         Self {
             player,
             coord,
-            result,
+            outcome,
         }
     }
 }
@@ -38,76 +41,189 @@ pub struct GameSnapshot {
     turn: Turn,
     history: Vec<TurnEvent>,
     status: GameStatus,
+    pub opponent_present: bool,
     pub player_board: BoardView,
     pub opponent_board: BoardView,
+    pub player_fleet: FleetView,
+    pub opponent_fleet: FleetView,
 }
 
-/*#[derive(Debug, Clone, Copy, Serialize)]
-pub struct GameUpdate {
-    pub event: TurnEvent,
-    pub turn: Turn,
-    pub status: GameStatus,
-}*/
-
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum GameUpdate {
     StateChanged,
     ShotFired { event: TurnEvent },
+    PlayerDisconnected { info: DisconnectInfo },
+    PlayerReconnected { player: Turn },
+    RematchCancelled { player: Turn },
+    RematchRejected { player: Turn },
+}
+
+#[derive(Debug)]
+pub enum PlayerSlot {
+    Empty,
+    Human { token: Uuid },
+    AI,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DisconnectInfo {
+    player: Turn,
+    disconnected_at: u64,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum GameMode {
+    Ai,
+    Multiplayer,
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum RematchState {
+    Idle,
+    Requested { by: Turn },
 }
 
 pub struct GameSession {
+    game_code: String,
+    mode: GameMode,
     game: GameState,
+    player1: PlayerSlot,
+    player2: PlayerSlot,
     ai: Option<AiPlayer>,
     history: Vec<TurnEvent>,
     tx: broadcast::Sender<GameUpdate>,
-    player1_token: Uuid,
-    player2_token: Option<Uuid>,
+    rematch: RematchState,
+    disconnected: HashMap<Turn, Instant>,
 }
 
 impl GameSession {
-    pub fn new_vs_ai() -> Self {
-        let player1 = Player::new();
-        let player1_token = Uuid::new_v4();
+    pub fn new(game_code: String, mode: GameMode) -> (Self, Uuid) {
 
-        let player2 = Player::new();
+        let player1_state = Player::new();
+        let player1_token = Uuid::new_v4();
+        let player1 = PlayerSlot::Human {
+            token: player1_token,
+        };
+
+        let player2_state = Player::new();
 
         let (tx, _) = broadcast::channel(32);
-        let mut game = GameState::new(player1, player2);
+        let mut game = GameState::new(player1_state, player2_state);
 
-        let ai = Some(AiPlayer::new());
-        // AI Fleet
-        let ai_fleet = Player::generate_random_fleet();
-        game.place_fleet(Turn::Player2, ai_fleet)
-            .expect("AI fleet placement failed");
+        let (player2, ai) = match mode {
+            GameMode::Multiplayer => (PlayerSlot::Empty, None),
+            GameMode::Ai => {
+                let ai = Some(AiPlayer::new());
+                let ai_fleet = Player::generate_random_fleet();
+                game.place_fleet(Turn::Player2, ai_fleet)
+                    .expect("AI fleet placement failed");
 
-        Self {
-            game,
-            ai,
-            history: Vec::new(),
-            tx,
+
+                (PlayerSlot::AI, ai)
+            }
+        };
+
+        (
+            Self {
+                game_code,
+                mode,
+                game,
+                player1,
+                player2,
+                ai,
+                history: Vec::new(),
+                tx,
+                rematch: RematchState::Idle,
+                disconnected: HashMap::with_capacity(2),
+            },
             player1_token,
-            player2_token: None,
+        )
+    }
+
+    fn restart_game(&mut self) -> Result<(), GameError> {
+        match self.game.status() {
+            GameStatus::Finished { .. } | GameStatus::Abandoned { .. } => {}
+            _ => return Err(GameError::InvalidGameState),
+        }
+
+        let player1_state = Player::new();
+        let player2_state = Player::new();
+        self.game = GameState::new(player1_state, player2_state);
+
+        self.history.clear();
+
+        if self.ai.is_some() {
+            self.ai = Some(AiPlayer::new());
+            let ai_fleet = Player::generate_random_fleet();
+            self.game
+                .place_fleet(Turn::Player2, ai_fleet)
+                .expect("AI fleet placement failed");
+        }
+
+        self.rematch = RematchState::Idle;
+
+
+        self.send_broadcast(GameUpdate::StateChanged);
+        Ok(())
+    }
+
+    pub fn request_rematch(&mut self, player: Turn) -> Result<(), GameError> {
+        match self.game.status() {
+            GameStatus::Finished { .. } | GameStatus::Abandoned { .. } => {}
+            _ => return Err(GameError::InvalidGameState),
+        }
+
+        // vs AI mode
+        if self.ai.is_some() {
+            self.restart_game()?;
+            return Ok(());
+        }
+
+        // Multiplayer mode
+        match self.rematch {
+            RematchState::Idle => {
+                self.rematch = RematchState::Requested { by: player };
+            }
+            RematchState::Requested { by } => {
+                if by != player {
+                    self.restart_game()?;
+                    return Ok(());
+                }
+            }
+        }
+        self.send_broadcast(GameUpdate::StateChanged);
+
+        Ok(())
+    }
+
+    pub fn cancel_rematch(&mut self, player: Turn) {
+
+        if let RematchState::Requested { by } = self.rematch {
+            if by == player {
+                self.rematch = RematchState::Idle;
+
+                self.send_broadcast(GameUpdate::StateChanged);
+                self.send_broadcast(GameUpdate::RematchCancelled { player });
+            }
         }
     }
 
-    pub fn new_vs_multiplayer() -> Self {
-        let player1 = Player::new();
-        let player1_token = Uuid::new_v4();
+    pub fn reject_rematch(&mut self, player: Turn) {
 
-        let player2 = Player::new();
+        if let RematchState::Requested { by } = self.rematch {
+            if by != player {
+                self.rematch = RematchState::Idle;
 
-        let (tx, _) = broadcast::channel(32);
-
-        let game = GameState::new(player1, player2);
-
-        Self {
-            game,
-            ai: None,
-            history: Vec::new(),
-            tx,
-            player1_token,
-            player2_token: None,
+                self.send_broadcast(GameUpdate::StateChanged);
+                self.send_broadcast(GameUpdate::RematchRejected { player });
+            }
         }
+    }
+
+    pub fn rematch_state(&self) -> RematchState {
+        self.rematch
     }
 
     pub fn status(&self) -> GameStatus {
@@ -118,6 +234,14 @@ impl GameSession {
         self.game.current_turn()
     }
 
+    pub fn player1(&self) -> &PlayerSlot {
+        &self.player1
+    }
+
+    pub fn player2(&self) -> &PlayerSlot {
+        &self.player2
+    }
+
     pub fn events(&self) -> &[TurnEvent] {
         &self.history
     }
@@ -126,44 +250,94 @@ impl GameSession {
         self.tx.subscribe()
     }
 
-    pub fn player1_token(&self) -> Uuid {
-        self.player1_token
+    fn send_broadcast(&self, msg: GameUpdate) {
+        if let Err(e) = self.tx.send(msg.clone()) {
+            warn!(error = ?e, broadcast = ?msg, "broadcast failed");
+        }
     }
 
-    pub fn player2_token(&self) -> Option<Uuid> {
-        self.player2_token
+    pub fn ready_status(&self, player: Turn) -> (bool, bool) {
+        match player {
+            Turn::Player1 => (self.game.player1_ready(), self.game.player2_ready()),
+            Turn::Player2 => (self.game.player2_ready(), self.game.player1_ready()),
+        }
+    }
+
+    pub fn mark_disconnected(&mut self, player: Turn) {
+        if self.is_disconnected(player) {
+            return;
+        }
+
+        self.disconnected.insert(player, Instant::now());
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+
+        self.send_broadcast(GameUpdate::PlayerDisconnected {
+            info: DisconnectInfo {
+                player,
+                disconnected_at: now,
+            },
+        });
+    }
+
+    pub fn mark_reconnected(&mut self, player: Turn) {
+        if self.disconnected.remove(&player).is_some() {
+            self.send_broadcast(GameUpdate::PlayerReconnected { player });
+            self.send_broadcast(GameUpdate::StateChanged);
+        }
+    }
+
+    pub fn is_disconnected(&self, player: Turn) -> bool {
+        self.disconnected.contains_key(&player)
+    }
+
+    pub fn disconnected_at(&self, player: Turn) -> Option<Instant> {
+        self.disconnected.get(&player).cloned()
     }
 
     pub fn join_player(&mut self) -> Result<Uuid, GameError> {
-        if self.player2_token().is_some() {
-            return Err(GameError::GameFull);
+        match self.player2 {
+            PlayerSlot::Empty => {
+                let player_token = Uuid::new_v4();
+                self.player2 = PlayerSlot::Human {
+                    token: player_token,
+                };
+
+                self.send_broadcast(GameUpdate::StateChanged);
+                Ok(player_token)
+            }
+            _ => Err(GameError::GameFull),
         }
-
-        let player_token = Uuid::new_v4();
-        self.player2_token = Some(player_token);
-
-        Ok(player_token)
     }
 
     pub fn player_from_token(&self, token: Uuid) -> Option<Turn> {
-        if token == self.player1_token {
-            Some(Turn::Player1)
-        } else if Some(token) == self.player2_token {
-            Some(Turn::Player2)
-        } else {
-            None
+        match (&self.player1, &self.player2) {
+            (PlayerSlot::Human { token: t1 }, _) if *t1 == token => Some(Turn::Player1),
+            (_, PlayerSlot::Human { token: t2 }) if *t2 == token => Some(Turn::Player2),
+            _ => None,
         }
     }
 
     pub fn snapshot_for(&self, viewer: Turn) -> GameSnapshot {
         let player = self.game.player(viewer);
         let opponent = self.game.player(viewer.opponent());
+
+        let opponent_present = match viewer {
+            Turn::Player1 => !matches!(self.player2(), PlayerSlot::Empty),
+            Turn::Player2 => true,
+        };
+
         GameSnapshot {
             turn: self.current_turn(),
             history: self.history.clone(),
             status: self.status(),
+            opponent_present,
             player_board: BoardView::new(player.board(), BoardPerspective::Owner),
             opponent_board: BoardView::new(opponent.board(), BoardPerspective::Opponent),
+            player_fleet: FleetView::from_fleet(player.ships(), FleetPerspective::Owner),
+            opponent_fleet: FleetView::from_fleet(opponent.ships(), FleetPerspective::Opponent),
         }
     }
 
@@ -174,7 +348,7 @@ impl GameSession {
     ) -> Result<(), GameError> {
         self.game.place_fleet(player, placements)?;
 
-        let _ = self.tx.send(GameUpdate::StateChanged);
+        self.send_broadcast(GameUpdate::StateChanged);
         Ok(())
     }
 
@@ -205,7 +379,9 @@ impl GameSession {
 
         let event = self.record_turn(acting_player, coord)?;
 
-        let _ = self.tx.send(GameUpdate::ShotFired { event });
+        self.send_broadcast(GameUpdate::ShotFired {
+            event: event.clone(),
+        });
         Ok(event)
     }
 
@@ -219,13 +395,11 @@ impl GameSession {
             let coord = ai.next_shot();
             let event = self.fire_once(Turn::Player2, coord)?;
 
-            if event.result == ShotResult::AlreadyShot {
-                panic!("AI fired at an already-shot cell {coord:?}");
-            }
+            debug_assert!(event.outcome.result != ShotResult::AlreadyShot);
 
-            ai.process_result(coord, event.result);
+            ai.process_result(coord, &event.outcome);
 
-            if event.result == ShotResult::Miss {
+            if event.outcome.result == ShotResult::Miss {
                 break;
             }
         }
@@ -234,9 +408,50 @@ impl GameSession {
         Ok(())
     }
 
+    pub fn handle_leave(&mut self, player: Turn) {
+        self.touch();
+        self.handle_abandon(player);
+        self.remove_player(player);
+        self.send_broadcast(GameUpdate::StateChanged);
+    }
+
+    fn remove_player(&mut self, player: Turn) {
+        match player {
+            Turn::Player1 => {
+                if let PlayerSlot::Human { .. } = self.player1 {
+                    self.player1 = PlayerSlot::Empty;
+                }
+            }
+            Turn::Player2 => {
+                if let PlayerSlot::Human { .. } = self.player2 {
+                    self.player2 = PlayerSlot::Empty;
+                }
+            }
+        }
+        info!(event = "player_left", ?player);
+    }
+
+    fn handle_abandon(&mut self, leaver: Turn) {
+        match self.game.status() {
+            GameStatus::Ongoing => {
+                let winner = leaver.opponent();
+
+                self.game.set_status(GameStatus::Abandoned {
+                    winner: Some(winner),
+                });
+                info!(event = "abandoned_match", player = ?leaver);
+            }
+            GameStatus::PlacingShips => {
+                self.game.set_status(GameStatus::Abandoned { winner: None });
+            }
+            _ => {}
+        }
+    }
+
     fn record_turn(&mut self, player: Turn, coord: Coord) -> Result<TurnEvent, GameError> {
-        let event = TurnEvent::new(player, coord, self.game.take_turn(coord)?);
-        self.history.push(event);
+        let outcome = self.game.take_turn(coord)?;
+        let event = TurnEvent::new(player, coord, outcome);
+        self.history.push(event.clone());
 
         Ok(event)
     }

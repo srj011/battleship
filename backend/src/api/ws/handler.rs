@@ -5,8 +5,9 @@ use axum::{
     },
     response::IntoResponse,
 };
-use futures::{SinkExt, StreamExt};
+use futures::{SinkExt, StreamExt, stream::SplitSink};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::sync::broadcast;
 
 use crate::api::errors::ApiError;
@@ -15,8 +16,7 @@ use crate::api::ws::messages::{ClientMessage, ServerMessage};
 use crate::app::game_session::{GameSession, GameUpdate};
 use crate::app::session_manager::SessionManager;
 use crate::game::coord::Coord;
-use crate::game::errors::GameError;
-use crate::game::game_state::Turn;
+use crate::game::game_state::{GameStatus, Turn};
 use crate::game::player::Player;
 use crate::game::ship::ShipPlacement;
 
@@ -29,7 +29,7 @@ pub async fn ws_handler(
     let session_arc = {
         let manager = manager.lock().unwrap();
         manager
-            .get_session_by_code(&code)
+            .get_session(&code)
             .ok_or(ApiError::SessionNotFound)?
     };
 
@@ -54,7 +54,7 @@ async fn handle_socket(
     // Get Session
     let session_opt = {
         let manager = manager.lock().unwrap();
-        manager.get_session_by_code(&game_code)
+        manager.get_session(&game_code)
     };
 
     let (session_arc, mut rx) = match session_opt {
@@ -71,23 +71,34 @@ async fn handle_socket(
             let error_msg = ServerMessage::Error {
                 message: "Session Not Found".into(),
             };
-            let _ = sender
-                .send(Message::Text(
-                    serde_json::to_string(&error_msg)
-                        .unwrap_or_else(|_| "{\"type\":\"error\", \"message\":\"internal\"}".into())
-                        .into(),
-                ))
-                .await;
+
+            send_ws(&mut sender, to_ws_message(error_msg)).await;
             return;
         }
     };
 
-    eprintln!("[WS] Connected: {game_code} as {player:?}");
+    let is_reconnect = {
+        let mut session = session_arc.lock().unwrap();
+        if session.is_disconnected(player) {
+            session.mark_reconnected(player);
+            true
+        } else {
+            false
+        }
+    };
 
-    // Inital message
+    if is_reconnect {
+        eprintln!("[WS] Connected: {game_code} as {player:?}");
+    } else {
+        eprintln!("[WS] Reconnected: {game_code} as {player:?}");
+    }
+
+    // Initial message
     let initial_message = {
         let session = session_arc.lock().unwrap();
         let snapshot = session.snapshot_for(player);
+        let (player_ready, opponent_ready) = session.ready_status(player);
+        let rematch_state = session.rematch_state();
 
         ServerMessage::GameState {
             player,
@@ -95,16 +106,16 @@ async fn handle_socket(
             status: session.status(),
             player_board: snapshot.player_board,
             opponent_board: snapshot.opponent_board,
+            player_fleet: snapshot.player_fleet,
+            opponent_fleet: snapshot.opponent_fleet,
+            opponent_present: snapshot.opponent_present,
+            player_ready,
+            opponent_ready,
+            rematch_state,
         }
     };
 
-    let _ = sender
-        .send(Message::Text(
-            serde_json::to_string(&initial_message)
-                .unwrap_or_else(|_| "{\"type\":\"error\", \"message\":\"internal\"}".into())
-                .into(),
-        ))
-        .await;
+    let _ = sender.send(to_ws_message(initial_message)).await;
 
     // Event loop
     loop {
@@ -118,30 +129,59 @@ async fn handle_socket(
                                     eprintln!("[WS] error: {e:?}");
                                     let server_msg = map_error_to_message(e);
                                     let error_msg = to_ws_message(server_msg);
-                                    let _ = sender.send(error_msg).await;
+                                    send_ws(&mut sender, error_msg).await;
                                 }
                             },
 
                             Ok(ClientMessage::RandomFleet) => {
                                 eprintln!("[WS] Random Fleet requested");
                                 let message = handle_random_fleet().await;
-                                let _ = sender.send(to_ws_message(message)).await;
+                                send_ws(&mut sender, to_ws_message(message)).await;
                             },
 
                             Ok(ClientMessage::PlaceFleet { fleet }) => {
                                 eprintln!("[WS] Fleet placement requested");
-                                match handle_place_fleet(session_arc.clone(), player, fleet).await {
-                                    Ok(message) => {
-                                        let _ = sender.send(to_ws_message(message)).await;
-                                    },
-                                    Err(e) => {
-                                        eprintln!("[WS] Placement error: {e:?}");
-                                        let server_msg = map_error_to_message(e);
-                                        let error_msg = to_ws_message(server_msg);
-                                        let _ = sender.send(error_msg).await;
-                                    }
+                                if let Err(err) = handle_place_fleet(session_arc.clone(), player, fleet).await {
+                                    eprintln!("[WS] Placement error: {e:?}");
+                                    let server_msg = map_error_to_message(err);
+                                    let error_msg = to_ws_message(server_msg);
+                                    send_ws(&mut sender, error_msg).await;
                                 }
                             },
+
+                            Ok(ClientMessage::RequestRematch) => {
+                                if let Err(err) = handle_rematch(session_arc.clone(), player).await {
+                                    let server_msg = map_error_to_message(err);
+                                    let error_msg = to_ws_message(server_msg);
+                                    send_ws(&mut sender, error_msg).await;
+                                }
+                            }
+
+                            Ok(ClientMessage::CancelRematch) => {
+                                {
+                                    let mut session = session_arc.lock().unwrap();
+                                    session.cancel_rematch(player);
+                                }
+                            }
+
+                            Ok(ClientMessage::RejectRematch) => {
+                                {
+                                    let mut session = session_arc.lock().unwrap();
+                                    session.reject_rematch(player);
+                                }
+                            }
+
+                            Ok(ClientMessage::LeaveGame) => {
+                                {
+                                    let mut session = session_arc.lock().unwrap();
+                                    session.handle_leave(player);
+                                }
+
+                                if let Err(e) = sender.close().await {
+                                    debug!(?e, "failed to close socket");
+                                }
+                                return;
+                            }
 
                             Err(err) => {
                                 eprintln!("Invalid message: {err}");
@@ -154,7 +194,29 @@ async fn handle_socket(
                         break;
                     },
                     None => {
-                        eprintln!("[WS] client disconnected");
+                        info!(event = "disconnected");
+
+                        let spawned_at = {
+                            let mut session = session_arc.lock().unwrap();
+                            session.mark_disconnected(player);
+                            session.disconnected_at(player).unwrap()
+                        };
+
+                        let session_clone = session_arc.clone();
+
+                        info!(event = "abandon_timer_started", timeout = 30);
+                        tokio::spawn(async move {
+                            time::sleep(Duration::from_secs(30)).await;
+
+                            let mut session = session_clone.lock().unwrap();
+
+                            if let Some(disconnected_at) = session.disconnected_at(player) {
+                                if spawned_at == disconnected_at {
+                                    session.handle_leave(player);
+                                }
+                            }
+                        });
+
                         break;
                     }
                 }
@@ -165,6 +227,8 @@ async fn handle_socket(
                         let message = {
                             let session = session_arc.lock().unwrap();
                             let snapshot = session.snapshot_for(player);
+                            let (player_ready, opponent_ready) = session.ready_status(player);
+                            let rematch_state = session.rematch_state();
 
                             match update {
                                 GameUpdate::StateChanged => ServerMessage::GameState {
@@ -173,6 +237,12 @@ async fn handle_socket(
                                     status: session.status(),
                                     player_board: snapshot.player_board,
                                     opponent_board: snapshot.opponent_board,
+                                    player_fleet: snapshot.player_fleet,
+                                    opponent_fleet: snapshot.opponent_fleet,
+                                    opponent_present: snapshot.opponent_present,
+                                    player_ready,
+                                    opponent_ready,
+                                    rematch_state
                                 },
                                 GameUpdate::ShotFired{ event } => ServerMessage::GameUpdate {
                                     event,
@@ -180,13 +250,19 @@ async fn handle_socket(
                                     status: session.status(),
                                     player_board: snapshot.player_board,
                                     opponent_board: snapshot.opponent_board,
-                                }
+                                },
+
+                                GameUpdate::PlayerDisconnected{ info } => ServerMessage::PlayerDisconnected { info },
+
+                                GameUpdate::PlayerReconnected{ player } => ServerMessage::PlayerReconnected { player },
+
+                                GameUpdate::RematchCancelled{ player } => ServerMessage::RematchCancelled { player },
+
+                                GameUpdate::RematchRejected{ player } => ServerMessage::RematchRejected { player }
                             }
                         };
 
-                        let _ = sender.send(Message::Text(serde_json::to_string(&message)
-                            .unwrap_or_else(|_| "{\"type\":\"error\", \"message\":\"internal\"}".into())
-                            .into())).await;
+                        send_ws(&mut sender, to_ws_message(message)).await;
                     },
                     Err(broadcast::error::RecvError::Lagged(_)) => {
                         eprintln!("[WS] lagged");
@@ -197,7 +273,12 @@ async fn handle_socket(
             }
         }
     }
-    eprintln!("[WS] Disconnected: {game_code} for {player:?}");
+}
+
+async fn send_ws(sender: &mut SplitSink<WebSocket, Message>, msg: Message) {
+    if let Err(e) = sender.send(msg).await {
+        debug!(?e, "send failed");
+    }
 }
 
 async fn handle_random_fleet() -> ServerMessage {
@@ -212,7 +293,7 @@ async fn handle_place_fleet(
     session_arc: Arc<Mutex<GameSession>>,
     player: Turn,
     fleet: Vec<ApiShipPlacement>,
-) -> Result<ServerMessage, ApiError> {
+) -> Result<(), ApiError> {
     let placements: Vec<ShipPlacement> = fleet
         .into_iter()
         .map(TryInto::try_into)
@@ -220,15 +301,8 @@ async fn handle_place_fleet(
 
     let mut session = session_arc.lock().unwrap();
     session.place_fleet(player, placements)?;
-    let snapshot = session.snapshot_for(player);
 
-    Ok(ServerMessage::GameState {
-        player,
-        turn: session.current_turn(),
-        status: session.status(),
-        player_board: snapshot.player_board,
-        opponent_board: snapshot.opponent_board,
-    })
+    Ok(())
 }
 
 async fn handle_fire(
@@ -244,12 +318,18 @@ async fn handle_fire(
     Ok(())
 }
 
+async fn handle_rematch(
+    session_arc: Arc<Mutex<GameSession>>,
+    player: Turn,
+) -> Result<(), ApiError> {
+    let mut session = session_arc.lock().unwrap();
+    session.request_rematch(player)?;
+    Ok(())
+}
+
 fn map_error_to_message(e: ApiError) -> ServerMessage {
-    let message = match e {
-        ApiError::Game(GameError::NotPlayersTurn) => "Not your turn",
-        ApiError::InvalidCoordinates => "Invalid coordinates",
-        _ => "Internal error",
-    };
+    let (_, response) = e.to_response();
+    let message = response.message;
 
     ServerMessage::Error {
         message: message.to_string(),

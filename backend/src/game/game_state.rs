@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::coord::Coord;
 use super::errors::GameError;
-use super::player::{Player, ShotResult};
+use super::player::{Player, ShotOutcome, ShotResult};
 use super::ship::ShipPlacement;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -27,6 +27,7 @@ pub enum GameStatus {
     PlacingShips,
     Ongoing,
     Finished { winner: Turn },
+    Abandoned { winner: Option<Turn> },
 }
 
 pub struct GameState {
@@ -54,8 +55,20 @@ impl GameState {
         self.status
     }
 
+    pub fn set_status(&mut self, status: GameStatus) {
+        self.status = status;
+    }
+
     pub fn current_turn(&self) -> Turn {
         self.current_turn
+    }
+
+    pub fn player1_ready(&self) -> bool {
+        self.player1_ready
+    }
+
+    pub fn player2_ready(&self) -> bool {
+        self.player2_ready
     }
 
     pub fn player(&self, player: Turn) -> &Player {
@@ -97,13 +110,13 @@ impl GameState {
         }
 
         if self.player1_ready && self.player2_ready {
-            self.status = GameStatus::Ongoing
+            self.set_status(GameStatus::Ongoing);
         }
 
         Ok(())
     }
 
-    pub fn take_turn(&mut self, coord: Coord) -> Result<ShotResult, GameError> {
+    pub fn take_turn(&mut self, coord: Coord) -> Result<ShotOutcome, GameError> {
         if let GameStatus::Finished { winner: _ } = self.status {
             return Err(GameError::GameAlreadyFinished);
         }
@@ -123,13 +136,13 @@ impl GameState {
         };
 
         if opponent_lost {
-            self.status = GameStatus::Finished {
+            self.set_status(GameStatus::Finished {
                 winner: self.current_turn,
-            };
+            });
             return Ok(result);
         }
 
-        if matches!(result, ShotResult::Miss) {
+        if matches!(result.result, ShotResult::Miss) {
             self.switch_turn();
         }
 

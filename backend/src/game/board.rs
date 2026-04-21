@@ -10,6 +10,7 @@ pub enum Cell {
     Ship(ShipType),
     Hit(ShipType),
     Miss,
+    Blocked,
 }
 
 pub struct Board {
@@ -32,7 +33,7 @@ impl Board {
         start: Coord,
         direction: Direction,
     ) -> Result<Vec<Coord>, PlacementError> {
-        let length = ship_type.length();
+        let length = ship_type.length() as usize;
         let mut positions = Vec::with_capacity(length);
 
         for i in 0..length {
@@ -119,7 +120,13 @@ impl Board {
                 FireOutcome::Hit(ship_type)
             }
 
-            Cell::Hit(_) | Cell::Miss => FireOutcome::AlreadyShot,
+            Cell::Hit(_) | Cell::Miss | Cell::Blocked => FireOutcome::AlreadyShot,
+        }
+    }
+
+    pub fn mark_blocked(&mut self, coord: Coord) {
+        if let Cell::Empty = self.get_cell(coord) {
+            self.grid[coord.row()][coord.col()] = Cell::Blocked;
         }
     }
 }

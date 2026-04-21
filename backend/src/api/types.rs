@@ -2,16 +2,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::api::errors::ApiError;
+use crate::app::game_session::GameMode;
 use crate::game::board::within_bounds;
 use crate::game::coord::Coord;
 use crate::game::ship::{Direction, ShipPlacement, ShipType};
-
-#[derive(Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum GameMode {
-    Ai,
-    Multiplayer,
-}
 
 #[derive(Deserialize)]
 pub struct CreateGameRequest {

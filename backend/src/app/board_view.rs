@@ -10,8 +10,9 @@ pub enum CellView {
     Unknown,
     Empty,
     Ship { ship_type: ShipType },
-    Hit,
+    Hit { ship_type: ShipType },
     Miss,
+    Blocked,
 }
 
 pub enum BoardPerspective {
@@ -40,8 +41,9 @@ impl BoardView {
                         BoardPerspective::Owner => CellView::Ship { ship_type },
                         BoardPerspective::Opponent => CellView::Unknown,
                     },
-                    Cell::Hit(_) => CellView::Hit,
+                    Cell::Hit(ship_type) => CellView::Hit { ship_type },
                     Cell::Miss => CellView::Miss,
+                    Cell::Blocked => CellView::Blocked,
                 };
             }
         }

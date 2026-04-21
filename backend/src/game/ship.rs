@@ -19,7 +19,7 @@ pub struct ShipPlacement {
 }
 
 impl ShipType {
-    pub fn length(&self) -> usize {
+    pub fn length(&self) -> u8 {
         match self {
             Self::Carrier => 5,
             Self::Battleship => 4,
@@ -41,7 +41,7 @@ pub const FLEET: [ShipType; 5] = [
 pub struct Ship {
     ship_type: ShipType,
     positions: Vec<Coord>,
-    hits: usize,
+    hits: u8,
 }
 
 impl Ship {
@@ -59,6 +59,10 @@ impl Ship {
 
     pub fn ship_type(&self) -> ShipType {
         self.ship_type
+    }
+
+    pub fn hits(&self) -> u8 {
+        self.hits
     }
 
     pub fn register_hit(&mut self) {
