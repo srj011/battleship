@@ -5,6 +5,7 @@
     import DisconnectOverlay from '$lib/components/DisconnectOverlay.svelte';
 
     import { onMount, onDestroy } from 'svelte';
+    import { beforeNavigate } from '$app/navigation';
     import { gameStore } from '$lib/stores/game';
     import { page } from '$app/state';
     import { connectWS, disconnectWS } from '$lib/api/websocket';
@@ -13,7 +14,33 @@
     const token = $derived(page.url.searchParams.get('player_token') ?? '');
 
     onMount(() => {
+        gameStore.reset();
         connectWS(code, token);
+
+        const handler = (e: BeforeUnloadEvent) => {
+            if (
+                $gameStore.game?.status.type === 'placing_ships' ||
+                $gameStore.game?.status.type === 'ongoing'
+            ) {
+                e.preventDefault();
+            }
+        };
+        window.addEventListener('beforeunload', handler);
+
+        return () => {
+            window.removeEventListener('beforeunload', handler);
+        };
+    });
+
+    beforeNavigate((nav) => {
+        if (
+            $gameStore.game?.status.type === 'placing_ships' ||
+            $gameStore.game?.status.type === 'ongoing'
+        ) {
+            if (!confirm('Leave game? Match will be forfeit.')) {
+                nav.cancel();
+            }
+        }
     });
 
     onDestroy(() => {
