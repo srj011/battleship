@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { createGame, joinGame } from '$lib/api/client';
+    import { ApiError, createGame, joinGame } from '$lib/api/client';
     import { gameStore } from '$lib/stores/game';
     import { notificationStore } from '$lib/stores/notification';
     import { goto } from '$app/navigation';
@@ -18,9 +18,18 @@
         loading = true;
         gameStore.reset();
 
-        const res = await createGame(mode);
-
-        goto(resolve(`/game/${res.game_code}?player_token=${res.player_token}`));
+        try {
+            const res = await createGame(mode);
+            goto(resolve(`/game/${res.game_code}?player_token=${res.player_token}`));
+        } catch {
+            loading = false;
+            notificationStore.push({
+                title: 'Unable to create game',
+                message: `We couldn’t reach the server.
+                    Please check your internet connection or try again in a moment.`,
+                type: 'error'
+            });
+        }
     }
 
     async function handleJoin() {
@@ -32,13 +41,31 @@
         try {
             const res = await joinGame(game_code);
             goto(resolve(`/game/${game_code}?player_token=${res.player_token}`));
-        } catch {
+        } catch (err) {
             loading = false;
-            notificationStore.push({
-                title: 'Session not found',
-                message: 'Check the game code and try again.',
-                type: 'error'
-            });
+
+            if (err instanceof ApiError) {
+                if (err.code === 'session_not_found') {
+                    notificationStore.push({
+                        title: 'Session not found',
+                        message: 'Check the game code and try again.',
+                        type: 'error'
+                    });
+                } else if (err.code === 'game_full') {
+                    notificationStore.push({
+                        title: 'Game is already full',
+                        message: 'The game you are trying to enter is already full.',
+                        type: 'error'
+                    });
+                } else {
+                    notificationStore.push({
+                        title: 'Unable to create game',
+                        message: `We couldn’t reach the server.
+                            Please check your internet connection or try again in a moment.`,
+                        type: 'error'
+                    });
+                }
+            }
         }
     }
 </script>

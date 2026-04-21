@@ -220,3 +220,15 @@ export type Notification = {
     message?: string;
     type?: NotificationType;
 };
+
+export type ApiErrorCode =
+    | 'session_not_found'
+    | 'invalid_player'
+    | 'invalid_message'
+    | 'invalid_coordinates'
+    | 'not_players_turn'
+    | 'game_already_finished'
+    | 'invalid_game_state'
+    | 'game_full'
+    | 'invalid_placement'
+    | 'internal_error';
