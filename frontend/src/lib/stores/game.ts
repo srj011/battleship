@@ -1,4 +1,5 @@
 import type {
+    DisconnectInfo,
     GameState,
     GameUpdate,
     ShipPlacement,
@@ -11,6 +12,7 @@ type GameStore = {
     game: GameState | null;
     randomFleet: ShipPlacement[] | null;
     connection: Connection;
+    playerDisconnect: DisconnectInfo | null;
 };
 
 function createGameStore() {
@@ -18,6 +20,7 @@ function createGameStore() {
         game: null,
         randomFleet: null,
         connection: { state: 'idle', attempt: 0 },
+        playerDisconnect: null
     });
 
     function applyGameUpdate(msg: GameUpdate) {
@@ -131,11 +134,14 @@ function createGameStore() {
         setGame: (game: GameState) => update((s) => ({ ...s, game })),
         applyGameUpdate,
         setRandomFleet: (fleet: ShipPlacement[]) => update((s) => ({ ...s, randomFleet: fleet })),
+        setDisconnect: (val: DisconnectInfo) => update((s) => ({ ...s, playerDisconnect: val })),
+        clearDisconnect: () => update((s) => ({ ...s, playerDisconnect: null })),
         reset: () =>
             set({
                 game: null,
                 randomFleet: null,
                 connection: { state: 'idle', attempt: 0 },
+                playerDisconnect: null
             })
     };
 }

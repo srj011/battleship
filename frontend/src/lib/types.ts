@@ -69,9 +69,14 @@ export type FleetView = {
 };
 
 export type ShipPlacement = {
-    ship_type: 'carrier' | 'battleship' | 'destroyer' | 'submarine' | 'patrolboat';
+    ship_type: ShipType;
     start: Coord;
-    direction: 'horizontal' | 'vertical';
+    direction: Direction;
+};
+
+export type DisconnectInfo = {
+    player: Player;
+    disconnected_at: number;
 };
 
 // Server Message
@@ -106,12 +111,28 @@ export type RandomFleet = {
     fleet: ShipPlacement[];
 };
 
+export type PlayerDisconnected = {
+    type: 'player_disconnected';
+    info: DisconnectInfo;
+};
+
+export type PlayerReconnected = {
+    type: 'player_reconnected';
+    player: Player;
+};
+
 export type ErrorMessage = {
     type: 'error';
     message: string;
 };
 
-export type ServerMessage = GameState | GameUpdate | RandomFleet | ErrorMessage;
+export type ServerMessage =
+    | GameState
+    | GameUpdate
+    | RandomFleet
+    | PlayerDisconnected
+    | PlayerReconnected
+    | ErrorMessage;
 /* ----------------------------------------------------------------------------------- */
 
 // Client Message

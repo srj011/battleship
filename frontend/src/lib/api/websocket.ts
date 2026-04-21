@@ -104,6 +104,14 @@ export function connectWS(code: string, token: string) {
                 console.log(msg.event);
                 break;
 
+            case 'player_disconnected':
+                gameStore.setDisconnect(msg.info);
+                break;
+
+            case 'player_reconnected':
+                gameStore.clearDisconnect();
+                break;
+
             case 'random_fleet':
                 gameStore.setRandomFleet(msg.fleet);
                 break;

@@ -2,6 +2,7 @@
     import PlacingShipsPhase from '$lib/components/phases/PlacingShipsPhase.svelte';
     import OngoingPhase from '$lib/components/phases/OngoingPhase.svelte';
     import FinishedPhase from '$lib/components/phases/FinishedPhase.svelte';
+    import DisconnectOverlay from '$lib/components/DisconnectOverlay.svelte';
 
     import { onMount, onDestroy } from 'svelte';
     import { gameStore } from '$lib/stores/game';
@@ -17,6 +18,38 @@
 
     onDestroy(() => {
         disconnectWS();
+    });
+
+    const TIMEOUT_MS = 30_000;
+
+    let seconds = $state(0);
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    $effect(() => {
+        const disconnect = $gameStore.playerDisconnect;
+
+        if (disconnect && disconnect.player !== $gameStore.game?.player) {
+            const update = () => {
+                const now = Date.now();
+                const elapsed = now - disconnect.disconnected_at;
+                const remaining = Math.max(0, TIMEOUT_MS - elapsed);
+                seconds = Math.ceil(remaining / 1000);
+
+                if (remaining <= 0 && interval) {
+                    clearInterval(interval);
+                    interval = null;
+                }
+            };
+            update();
+
+            interval = setInterval(update, 1000);
+        } else {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+            seconds = 0;
+        }
     });
 
     const phase = $derived($gameStore.game?.status.type);
@@ -36,5 +69,9 @@
         <OngoingPhase />
     {:else}
         <FinishedPhase />
+    {/if}
+
+    {#if $gameStore.playerDisconnect && $gameStore.playerDisconnect.player !== $gameStore.game?.player && seconds > 0}
+        <DisconnectOverlay {seconds} />
     {/if}
 </div>
