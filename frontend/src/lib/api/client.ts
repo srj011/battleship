@@ -33,3 +33,20 @@ export async function joinGame(code: string) {
         method: 'POST'
     });
 }
+
+export async function verifySession(
+    code: string,
+    token: string
+): Promise<'valid' | 'not-found' | 'error'> {
+    try {
+        const res = await fetch(`${API_V1}/game/${code}?player_token=${token}`);
+
+        if (res.status === 404) {
+            return 'not-found';
+        }
+        if (res.ok) return 'valid';
+        return 'error';
+    } catch {
+        return 'error';
+    }
+}

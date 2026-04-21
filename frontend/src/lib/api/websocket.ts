@@ -2,6 +2,7 @@
 import { gameStore } from '$lib/stores/game';
 import { get } from 'svelte/store';
 import type { ClientMessage, ServerMessage } from '$lib/types';
+import { verifySession } from '$lib/api/client';
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -63,7 +64,30 @@ export function connectWS(code: string, token: string) {
             return;
         }
 
-        scheduleReconnect();
+        if (connection.state === 'connecting') {
+            verifySession(code, token).then((status) => {
+                console.log('verifySession output: ', status);
+
+                if (get(gameStore).connection.state !== 'connecting') return;
+
+                if (status === 'not-found') {
+                    gameStore.dispatch({ type: 'INVALID_SESSION' });
+
+                    if (reconnectTimer) {
+                        clearTimeout(reconnectTimer);
+                        reconnectTimer = null;
+                    }
+
+                    return;
+                }
+
+                gameStore.dispatch({ type: 'DISCONNECTED' });
+                scheduleReconnect();
+            });
+        } else {
+            gameStore.dispatch({ type: 'DISCONNECTED' });
+            scheduleReconnect();
+        }
     };
 
     socket.onmessage = (messageEvent) => {
