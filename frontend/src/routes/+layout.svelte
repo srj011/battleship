@@ -9,6 +9,7 @@
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
+    import Logo from '$lib/components/Logo.svelte';
     import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
     import NotificationStack from '$lib/components/notification/NotificationStack.svelte';
     import LeaveGame from '$lib/components/LeaveGame.svelte';
@@ -44,7 +45,7 @@
         <div class="grid grid-cols-3 items-center px-6 py-3">
             <!-- Left -->
             <div class="flex items-center gap-4">
-                <h1 class="justify-self-start text-lg font-semibold uppercase">BATTLESHIP</h1>
+                <Logo />
 
                 {#if page.params.code}
                     <!-- Divider -->
