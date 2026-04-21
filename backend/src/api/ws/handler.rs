@@ -108,7 +108,7 @@ async fn handle_socket(
             opponent_board: snapshot.opponent_board,
             player_fleet: snapshot.player_fleet,
             opponent_fleet: snapshot.opponent_fleet,
-            opponent_joined: snapshot.opponent_joined,
+            opponent_present: snapshot.opponent_present,
             player_ready,
             opponent_ready,
             rematch_state,
@@ -250,7 +250,7 @@ async fn handle_socket(
                                     opponent_board: snapshot.opponent_board,
                                     player_fleet: snapshot.player_fleet,
                                     opponent_fleet: snapshot.opponent_fleet,
-                                    opponent_joined: snapshot.opponent_joined,
+                                    opponent_present: snapshot.opponent_present,
                                     player_ready,
                                     opponent_ready,
                                     rematch_state

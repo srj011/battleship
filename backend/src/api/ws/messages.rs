@@ -29,7 +29,7 @@ pub enum ServerMessage {
         opponent_board: BoardView,
         player_fleet: FleetView,
         opponent_fleet: FleetView,
-        opponent_joined: bool,
+        opponent_present: bool,
         player_ready: bool,
         opponent_ready: bool,
         rematch_state: RematchState,

@@ -41,7 +41,7 @@ pub struct GameSnapshot {
     turn: Turn,
     history: Vec<TurnEvent>,
     status: GameStatus,
-    pub opponent_joined: bool,
+    pub opponent_present: bool,
     pub player_board: BoardView,
     pub opponent_board: BoardView,
     pub player_fleet: FleetView,
@@ -324,7 +324,7 @@ impl GameSession {
         let player = self.game.player(viewer);
         let opponent = self.game.player(viewer.opponent());
 
-        let opponent_joined = match viewer {
+        let opponent_present = match viewer {
             Turn::Player1 => !matches!(self.player2(), PlayerSlot::Empty),
             Turn::Player2 => true,
         };
@@ -333,7 +333,7 @@ impl GameSession {
             turn: self.current_turn(),
             history: self.history.clone(),
             status: self.status(),
-            opponent_joined,
+            opponent_present,
             player_board: BoardView::new(player.board(), BoardPerspective::Owner),
             opponent_board: BoardView::new(opponent.board(), BoardPerspective::Opponent),
             player_fleet: FleetView::from_fleet(player.ships(), FleetPerspective::Owner),
