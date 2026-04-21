@@ -5,6 +5,7 @@
     import Board from '$lib/components/game/Board.svelte';
     import Fleet from '$lib/components/game/Fleet.svelte';
     import Icon from '@iconify/svelte';
+    import RematchDialog from '$lib/components/RematchDialog.svelte';
 
     const playerFleet = $derived($gameStore.game?.player_fleet);
     const opponentFleet = $derived($gameStore.game?.opponent_fleet);
@@ -17,14 +18,15 @@
     const rematchSelf = $derived($gameStore.game?.player_rematch_ready ?? false);
     const rematchOpponent = $derived($gameStore.game?.opponent_rematch_ready ?? false);
 
-    function handleRestart() {
-        const msg: ClientMessage = { type: 'restart' };
+    function handleRematch() {
+        const msg: ClientMessage = { type: 'request_rematch' };
         sendWS(msg);
     }
 </script>
 
 <div class="flex flex-col items-center gap-6">
     {#if $gameStore.game}
+        <RematchDialog />
         <!-- GameOver Status -->
         {#if $gameStore.game.status.type === 'finished' || isAbandoned}
             <div class="flex w-full flex-col items-center gap-4">
@@ -48,25 +50,17 @@
                         {isAbandoned ? 'Opponent left the match' : isWin ? 'VICTORY' : 'DEFEAT'}
                     </span>
                 </div>
-                <button
-                    class="cursor-pointer rounded-sm bg-gray-900/90 px-4
-                    py-2 text-sm font-semibold text-white uppercase
-                    hover:bg-gray-800/80"
-                    onclick={handleRestart}
-                    disabled={!rematchSelf}
-                >
-                    {#if rematchSelf}
-                        {#if rematchOpponent}
-                            Starting new game...
-                        {:else}
-                            Waiting for opponent...
-                        {/if}
-                    {:else if rematchOpponent}
-                        Accept Rematch
-                    {:else}
+                {#if !isAbandoned}
+                    <button
+                        class="cursor-pointer rounded-sm bg-gray-900/90 px-4
+                        py-2 text-sm font-semibold text-white uppercase
+                        hover:bg-gray-800/80"
+                        onclick={handleRematch}
+                        disabled={$gameStore.game.rematch_state.type === 'requested'}
+                    >
                         Play Again
-                    {/if}
-                </button>
+                    </button>
+                {/if}
             </div>
         {/if}
 

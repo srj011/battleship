@@ -79,6 +79,8 @@ export type DisconnectInfo = {
     disconnected_at: number;
 };
 
+export type RematchState = { type: 'idle' } | { type: 'requested'; by: Player };
+
 // Server Message
 /* ----------------------------------------------------------------------------------- */
 export type GameState = {
@@ -93,8 +95,7 @@ export type GameState = {
     opponent_joined: boolean;
     player_ready: boolean;
     opponent_ready: boolean;
-    player_rematch_ready: boolean;
-    opponent_rematch_ready: boolean;
+    rematch_state: RematchState;
 };
 
 export type GameUpdate = {
@@ -121,6 +122,16 @@ export type PlayerReconnected = {
     player: Player;
 };
 
+export type RematchCancelled = {
+    type: 'rematch_cancelled';
+    player: Player;
+};
+
+export type RematchRejected = {
+    type: 'rematch_rejected';
+    player: Player;
+};
+
 export type ErrorMessage = {
     type: 'error';
     message: string;
@@ -132,6 +143,8 @@ export type ServerMessage =
     | RandomFleet
     | PlayerDisconnected
     | PlayerReconnected
+    | RematchCancelled
+    | RematchRejected
     | ErrorMessage;
 /* ----------------------------------------------------------------------------------- */
 
@@ -151,8 +164,18 @@ export type FireMessage = {
     coord: Coord;
 };
 
-export type RestartMessage = {
-    type: 'restart';
+export type RequestRematchMessage = {
+    type: 'request_rematch';
+};
+
+export type CancelRematchMessage = {
+    type: 'cancel_rematch';
+};
+
+export type RejectRematchMessage = {
+    type: 'reject_rematch';
+};
+
 export type LeaveGameMessage = {
     type: 'leave_game';
 };
@@ -161,6 +184,9 @@ export type ClientMessage =
     | RandomFleetMessage
     | PlaceFleetMessage
     | FireMessage
+    | RequestRematchMessage
+    | CancelRematchMessage
+    | RejectRematchMessage
     | LeaveGameMessage;
 /* ----------------------------------------------------------------------------------- */
 

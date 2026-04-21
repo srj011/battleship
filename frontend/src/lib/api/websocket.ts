@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 import { gameStore } from '$lib/stores/game';
+import { notificationStore } from '$lib/stores/notification';
 import { get } from 'svelte/store';
 import type { ClientMessage, ServerMessage } from '$lib/types';
 import { verifySession } from '$lib/api/client';
@@ -110,6 +111,22 @@ export function connectWS(code: string, token: string) {
 
             case 'player_reconnected':
                 gameStore.clearDisconnect();
+                break;
+
+            case 'rematch_cancelled':
+                notificationStore.push({
+                    title: 'Rematch cancelled',
+                    message: `${msg.player === get(gameStore).game?.player ? 'You' : 'Opponent'} cancelled the rematch`,
+                    type: 'info'
+                });
+                break;
+
+            case 'rematch_rejected':
+                notificationStore.push({
+                    title: 'Rematch declined',
+                    message: `${msg.player === get(gameStore).game?.player ? 'You' : 'Opponent'} declined the rematch request`,
+                    type: 'info'
+                });
                 break;
 
             case 'random_fleet':
