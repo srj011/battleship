@@ -29,7 +29,7 @@ pub async fn ws_handler(
     let session_arc = {
         let manager = manager.lock().unwrap();
         manager
-            .get_session_by_code(&code)
+            .get_session(&code)
             .ok_or(ApiError::SessionNotFound)?
     };
 
@@ -54,7 +54,7 @@ async fn handle_socket(
     // Get Session
     let session_opt = {
         let manager = manager.lock().unwrap();
-        manager.get_session_by_code(&game_code)
+        manager.get_session(&game_code)
     };
 
     let (session_arc, mut rx) = match session_opt {

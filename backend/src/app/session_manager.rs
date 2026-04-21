@@ -1,73 +1,50 @@
 use rand::RngExt;
-use rand::distr::Alphanumeric;
+use rand::distr::slice::Choose;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
-use super::game_session::GameSession;
+use super::game_session::{GameMode, GameSession};
+use crate::game::game_state::GameStatus;
+
+const CODE_CHARS: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 pub struct SessionManager {
-    sessions: HashMap<Uuid, Arc<Mutex<GameSession>>>,
-    game_codes: HashMap<String, Uuid>,
+    sessions: HashMap<String, Arc<Mutex<GameSession>>>,
 }
 
 impl SessionManager {
     pub fn new() -> Self {
         Self {
             sessions: HashMap::new(),
-            game_codes: HashMap::new(),
         }
     }
 
-    pub fn get_session(&self, id: &Uuid) -> Option<Arc<Mutex<GameSession>>> {
-        self.sessions.get(id).cloned()
+    pub fn get_session(&self, code: &str) -> Option<Arc<Mutex<GameSession>>> {
+        self.sessions.get(code).cloned()
     }
 
-    pub fn get_session_by_code(&self, code: &str) -> Option<Arc<Mutex<GameSession>>> {
-        self.game_codes
-            .get(code)
-            .and_then(|id| self.get_session(&id))
-    }
-
-    pub fn create_vs_ai(&mut self) -> (String, Uuid) {
-        let id = Uuid::new_v4();
-        let (session, player1_token) = GameSession::new_vs_ai();
-        let session_arc = Arc::new(Mutex::new(session));
-
+    pub fn create_session(&mut self, mode: GameMode) -> (String, Uuid) {
         let code = loop {
             let code = Self::generate_code();
-            if !self.game_codes.contains_key(&code) {
+            if !self.sessions.contains_key(&code) {
                 break code;
             }
         };
-        self.game_codes.insert(code.clone(), id);
-        self.sessions.insert(id, session_arc);
 
-        (code, player1_token)
-    }
-
-    pub fn create_multiplayer(&mut self) -> (String, Uuid) {
-        let id = Uuid::new_v4();
-        let (session, player1_token) = GameSession::new_vs_multiplayer();
+        let (session, player1_token) = GameSession::new(code.clone(), mode);
         let session_arc = Arc::new(Mutex::new(session));
-
-        let code = loop {
-            let code = Self::generate_code();
-            if !self.game_codes.contains_key(&code) {
-                break code;
-            }
-        };
-        self.game_codes.insert(code.clone(), id);
-        self.sessions.insert(id, session_arc);
+        self.sessions.insert(code.clone(), session_arc);
 
         (code, player1_token)
     }
 
     fn generate_code() -> String {
+        let dist = Choose::new(CODE_CHARS).expect("Code chars array cannot be empty");
         rand::rng()
-            .sample_iter(&Alphanumeric)
+            .sample_iter(dist)
             .take(6)
-            .map(char::from)
+            .map(|b| *b as char)
             .collect()
     }
 }

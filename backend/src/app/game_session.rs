@@ -59,7 +59,16 @@ pub enum PlayerSlot {
     AI,
 }
 
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum GameMode {
+    Ai,
+    Multiplayer,
+}
+
 pub struct GameSession {
+    game_code: String,
+    mode: GameMode,
     game: GameState,
     player1: PlayerSlot,
     player2: PlayerSlot,
@@ -71,7 +80,8 @@ pub struct GameSession {
 }
 
 impl GameSession {
-    pub fn new_vs_ai() -> (Self, Uuid) {
+    pub fn new(game_code: String, mode: GameMode) -> (Self, Uuid) {
+
         let player1_state = Player::new();
         let player1_token = Uuid::new_v4();
         let player1 = PlayerSlot::Human {
@@ -79,52 +89,31 @@ impl GameSession {
         };
 
         let player2_state = Player::new();
-        let player2 = PlayerSlot::AI;
 
         let (tx, _) = broadcast::channel(32);
         let mut game = GameState::new(player1_state, player2_state);
 
-        // AI Player
-        let ai = Some(AiPlayer::new());
-        let ai_fleet = Player::generate_random_fleet();
-        game.place_fleet(Turn::Player2, ai_fleet)
-            .expect("AI fleet placement failed");
+        let (player2, ai) = match mode {
+            GameMode::Multiplayer => (PlayerSlot::Empty, None),
+            GameMode::Ai => {
+                let ai = Some(AiPlayer::new());
+                let ai_fleet = Player::generate_random_fleet();
+                game.place_fleet(Turn::Player2, ai_fleet)
+                    .expect("AI fleet placement failed");
+
+
+                (PlayerSlot::AI, ai)
+            }
+        };
 
         (
             Self {
+                game_code,
+                mode,
                 game,
                 player1,
                 player2,
                 ai,
-                history: Vec::new(),
-                tx,
-                player1_wants_rematch: false,
-                player2_wants_rematch: false,
-            },
-            player1_token,
-        )
-    }
-
-    pub fn new_vs_multiplayer() -> (Self, Uuid) {
-        let player1_state = Player::new();
-        let player1_token = Uuid::new_v4();
-        let player1 = PlayerSlot::Human {
-            token: player1_token,
-        };
-
-        let player2_state = Player::new();
-        let player2 = PlayerSlot::Empty;
-
-        let (tx, _) = broadcast::channel(32);
-
-        let game = GameState::new(player1_state, player2_state);
-
-        (
-            Self {
-                game,
-                player1,
-                player2,
-                ai: None,
                 history: Vec::new(),
                 tx,
                 player1_wants_rematch: false,

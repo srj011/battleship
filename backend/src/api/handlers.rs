@@ -24,10 +24,7 @@ pub async fn create_game(
 ) -> Json<CreateGameResponse> {
     let mut manager = manager.lock().unwrap();
 
-    let (game_code, player_token) = match request.mode {
-        GameMode::Ai => manager.create_vs_ai(),
-        GameMode::Multiplayer => manager.create_multiplayer(),
-    };
+    let (game_code, player_token) = manager.create_session(request.mode);
 
     Json(CreateGameResponse {
         game_code,
@@ -42,7 +39,7 @@ pub async fn join_game(
     let session_arc = {
         let manager = manager.lock().unwrap();
         manager
-            .get_session_by_code(&code)
+            .get_session(&code)
             .ok_or(ApiError::SessionNotFound)?
     };
 
@@ -61,7 +58,7 @@ pub async fn get_game(
     let session_arc = {
         let manager = manager.lock().unwrap();
         manager
-            .get_session_by_code(&code)
+            .get_session(&code)
             .ok_or(ApiError::SessionNotFound)?
     };
     let session = session_arc.lock().unwrap();
@@ -86,7 +83,7 @@ pub async fn place_fleet(
     let session_arc = {
         let manager = manager.lock().unwrap();
         manager
-            .get_session_by_code(&code)
+            .get_session(&code)
             .ok_or(ApiError::SessionNotFound)?
     };
     let mut session = session_arc.lock().unwrap();
@@ -123,7 +120,7 @@ pub async fn fire(
     let session_arc = {
         let manager = manager.lock().unwrap();
         manager
-            .get_session_by_code(&code)
+            .get_session(&code)
             .ok_or(ApiError::SessionNotFound)?
     };
     let mut session = session_arc.lock().unwrap();
