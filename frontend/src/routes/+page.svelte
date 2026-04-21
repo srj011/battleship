@@ -1,6 +1,7 @@
 <script lang="ts">
     import { createGame, joinGame } from '$lib/api/client';
     import { gameStore } from '$lib/stores/game';
+    import { notificationStore } from '$lib/stores/notification';
     import { goto } from '$app/navigation';
     import Icon from '@iconify/svelte';
     import { resolve } from '$app/paths';
@@ -23,9 +24,17 @@
         loading = true;
         gameStore.reset();
 
-        const res = await joinGame(game_code);
-
-        goto(resolve(`/game/${game_code}?player_token=${res.player_token}`));
+        try {
+            const res = await joinGame(game_code);
+            goto(resolve(`/game/${game_code}?player_token=${res.player_token}`));
+        } catch {
+            loading = false;
+            notificationStore.push({
+                title: 'Session not found',
+                message: 'Check the game code and try again.',
+                type: 'error'
+            });
+        }
     }
 </script>
 
