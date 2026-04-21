@@ -9,6 +9,8 @@
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
+    import LeaveGame from '$lib/components/LeaveGame.svelte';
+    import { Button } from '$lib/components/ui/button';
 
     const { children } = $props();
 
@@ -58,7 +60,9 @@
                                 ? 'SHIP PLACEMENT'
                                 : phase === 'ongoing'
                                   ? 'ONGOING'
-                                  : 'FINISHED'}
+                                  : phase === 'abandoned'
+                                    ? 'ABANDONED'
+                                    : 'FINISHED'}
                         </span>
                     </div>
                 {/if}
@@ -125,13 +129,18 @@
                     </div>
                 </div>
                 {#if page.params.code}
-                    <button
-                        class="cursor-pointer rounded-sm border border-red-500/50 bg-red-500/70 px-3 py-2
-                        text-xs font-semibold text-gray-100 uppercase"
-                        onclick={handleLeave}
-                    >
-                        LEAVE GAME
-                    </button>
+                    {#if $gameStore.game?.status.type === 'placing_ships' || $gameStore.game?.status.type === 'ongoing'}
+                        <LeaveGame />
+                    {:else}
+                        <Button
+                            onclick={() => {
+                                gameStore.reset();
+                                goto(resolve('/'));
+                            }}
+                        >
+                            Return to Lobby
+                        </Button>
+                    {/if}
                 {/if}
             </div>
         </div>

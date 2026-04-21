@@ -12,6 +12,7 @@
     const isWin =
         $gameStore.game?.status.type === 'finished' &&
         $gameStore.game.status.winner === $gameStore.game.player;
+    const isAbandoned = $gameStore.game?.status.type === 'abandoned';
 
     const rematchSelf = $derived($gameStore.game?.player_rematch_ready ?? false);
     const rematchOpponent = $derived($gameStore.game?.opponent_rematch_ready ?? false);
@@ -25,21 +26,26 @@
 <div class="flex flex-col items-center gap-6">
     {#if $gameStore.game}
         <!-- GameOver Status -->
-        {#if $gameStore.game.status.type === 'finished'}
+        {#if $gameStore.game.status.type === 'finished' || isAbandoned}
             <div class="flex w-full flex-col items-center gap-4">
                 <div
                     class={`flex w-full items-center justify-center gap-3 rounded-xs py-4 shadow-lg ${
-                        isWin ? 'bg-green-700/90' : 'bg-red-700/90'
+                        isAbandoned ? 'bg-gray-500/90' : isWin ? 'bg-green-700/90' : 'bg-red-700/90'
                     }`}
                 >
                     <Icon
-                        icon={isWin ? 'noto:trophy' : 'emojione:skull-and-crossbones'}
-                        font-size="25"
+                        icon={isAbandoned
+                            ? 'mdi:exit-run'
+                            : isWin
+                              ? 'noto:trophy'
+                              : 'emojione:skull-and-crossbones'}
+                        width="25"
+                        height="25"
                     />
                     <span
                         class="text-center text-xl font-semibold tracking-widest text-white uppercase"
                     >
-                        {isWin ? 'VICTORY' : 'DEFEAT'}
+                        {isAbandoned ? 'Opponent left the match' : isWin ? 'VICTORY' : 'DEFEAT'}
                     </span>
                 </div>
                 <button

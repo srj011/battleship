@@ -42,8 +42,8 @@ export type DamageInfo = {
 export type ShotOutcome = {
     result: ShotResult;
     blocked: Coord[];
-    sunk_ship?: ShipType;
-    damage?: DamageInfo;
+    sunk_ship: ShipType | null;
+    damage: DamageInfo | null;
 };
 
 export type TurnEvent = {
@@ -55,11 +55,12 @@ export type TurnEvent = {
 export type GameStatus =
     | { type: 'placing_ships' }
     | { type: 'ongoing' }
-    | { type: 'finished'; winner: Player };
+    | { type: 'finished'; winner: Player }
+    | { type: 'abandoned'; winner: Player | null };
 
 export type ShipStatus = {
     ship_type: ShipType;
-    damage?: number;
+    damage: number | null;
     sunk: boolean;
 };
 
@@ -131,9 +132,15 @@ export type FireMessage = {
 
 export type RestartMessage = {
     type: 'restart';
+export type LeaveGameMessage = {
+    type: 'leave_game';
 };
 
-export type ClientMessage = RandomFleetMessage | PlaceFleetMessage | FireMessage | RestartMessage;
+export type ClientMessage =
+    | RandomFleetMessage
+    | PlaceFleetMessage
+    | FireMessage
+    | LeaveGameMessage;
 /* ----------------------------------------------------------------------------------- */
 
 export type ConnectionState =

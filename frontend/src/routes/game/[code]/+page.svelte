@@ -18,6 +18,8 @@
     onDestroy(() => {
         disconnectWS();
     });
+
+    const phase = $derived($gameStore.game?.status.type);
 </script>
 
 <div class="flex flex-1 justify-center gap-6 p-4">
@@ -28,11 +30,11 @@
         </div>
     {:else if !$gameStore.game}
         <p>Loading game...</p>
-    {:else if $gameStore.game.status.type === 'placing_ships'}
+    {:else if phase === 'placing_ships'}
         <PlacingShipsPhase />
-    {:else if $gameStore.game.status.type === 'ongoing'}
+    {:else if phase === 'ongoing'}
         <OngoingPhase />
-    {:else if $gameStore.game.status.type === 'finished'}
+    {:else}
         <FinishedPhase />
     {/if}
 </div>

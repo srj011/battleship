@@ -182,11 +182,25 @@ export function disconnectWS() {
     }
 }
 
-    socket?.close(1000, 'Manual disconnect');
-    socket = null;
+export function leaveGame() {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        const msg: ClientMessage = { type: 'leave_game' };
+        sendWS(msg);
 
-    currentCode = null;
-    currentToken = null;
+        const closeAfterFlush = () => {
+            if (!socket) return;
+
+            if (socket.bufferedAmount === 0) {
+                gameStore.dispatch({ type: 'LEAVE' });
+                disconnectWS();
+            } else {
+                setTimeout(closeAfterFlush, 10);
+            }
+        };
+        closeAfterFlush();
+    } else {
+        disconnectWS();
+    }
 }
 
 if (typeof document !== 'undefined') {
