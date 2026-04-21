@@ -5,7 +5,7 @@ use axum::{
     },
     response::IntoResponse,
 };
-use futures::{SinkExt, StreamExt};
+use futures::{SinkExt, StreamExt, stream::SplitSink};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::broadcast;
@@ -16,8 +16,7 @@ use crate::api::ws::messages::{ClientMessage, ServerMessage};
 use crate::app::game_session::{GameSession, GameUpdate};
 use crate::app::session_manager::SessionManager;
 use crate::game::coord::Coord;
-use crate::game::errors::GameError;
-use crate::game::game_state::Turn;
+use crate::game::game_state::{GameStatus, Turn};
 use crate::game::player::Player;
 use crate::game::ship::ShipPlacement;
 
@@ -72,13 +71,8 @@ async fn handle_socket(
             let error_msg = ServerMessage::Error {
                 message: "Session Not Found".into(),
             };
-            let _ = sender
-                .send(Message::Text(
-                    serde_json::to_string(&error_msg)
-                        .unwrap_or_else(|_| "{\"type\":\"error\", \"message\":\"internal\"}".into())
-                        .into(),
-                ))
-                .await;
+
+            send_ws(&mut sender, to_ws_message(error_msg)).await;
             return;
         }
     };
@@ -122,13 +116,7 @@ async fn handle_socket(
         }
     };
 
-    let _ = sender
-        .send(Message::Text(
-            serde_json::to_string(&initial_message)
-                .unwrap_or_else(|_| "{\"type\":\"error\", \"message\":\"internal\"}".into())
-                .into(),
-        ))
-        .await;
+    let _ = sender.send(to_ws_message(initial_message)).await;
 
     // Event loop
     loop {
@@ -142,28 +130,23 @@ async fn handle_socket(
                                     eprintln!("[WS] error: {e:?}");
                                     let server_msg = map_error_to_message(e);
                                     let error_msg = to_ws_message(server_msg);
-                                    let _ = sender.send(error_msg).await;
+                                    send_ws(&mut sender, error_msg).await;
                                 }
                             },
 
                             Ok(ClientMessage::RandomFleet) => {
                                 eprintln!("[WS] Random Fleet requested");
                                 let message = handle_random_fleet().await;
-                                let _ = sender.send(to_ws_message(message)).await;
+                                send_ws(&mut sender, to_ws_message(message)).await;
                             },
 
                             Ok(ClientMessage::PlaceFleet { fleet }) => {
                                 eprintln!("[WS] Fleet placement requested");
-                                match handle_place_fleet(session_arc.clone(), player, fleet).await {
-                                    Ok(message) => {
-                                        let _ = sender.send(to_ws_message(message)).await;
-                                    },
-                                    Err(e) => {
-                                        eprintln!("[WS] Placement error: {e:?}");
-                                        let server_msg = map_error_to_message(e);
-                                        let error_msg = to_ws_message(server_msg);
-                                        let _ = sender.send(error_msg).await;
-                                    }
+                                if let Err(err) = handle_place_fleet(session_arc.clone(), player, fleet).await {
+                                    eprintln!("[WS] Placement error: {e:?}");
+                                    let server_msg = map_error_to_message(err);
+                                    let error_msg = to_ws_message(server_msg);
+                                    send_ws(&mut sender, error_msg).await;
                                 }
                             },
 
@@ -173,7 +156,7 @@ async fn handle_socket(
                                     eprintln!("[WS] Restart error");
                                     let server_msg = map_error_to_message(e);
                                     let error_msg = to_ws_message(server_msg);
-                                    let _ = sender.send(error_msg).await;
+                                    send_ws(&mut sender, error_msg).await;
                                 }
                             }
 
@@ -276,9 +259,7 @@ async fn handle_socket(
                             }
                         };
 
-                        let _ = sender.send(Message::Text(serde_json::to_string(&message)
-                            .unwrap_or_else(|_| "{\"type\":\"error\", \"message\":\"internal\"}".into())
-                            .into())).await;
+                        send_ws(&mut sender, to_ws_message(message)).await;
                     },
                     Err(broadcast::error::RecvError::Lagged(_)) => {
                         eprintln!("[WS] lagged");
@@ -289,7 +270,12 @@ async fn handle_socket(
             }
         }
     }
-    eprintln!("[WS] Disconnected: {game_code} for {player:?}");
+}
+
+async fn send_ws(sender: &mut SplitSink<WebSocket, Message>, msg: Message) {
+    if let Err(e) = sender.send(msg).await {
+        debug!(?e, "send failed");
+    }
 }
 
 async fn handle_random_fleet() -> ServerMessage {
@@ -304,7 +290,7 @@ async fn handle_place_fleet(
     session_arc: Arc<Mutex<GameSession>>,
     player: Turn,
     fleet: Vec<ApiShipPlacement>,
-) -> Result<ServerMessage, ApiError> {
+) -> Result<(), ApiError> {
     let placements: Vec<ShipPlacement> = fleet
         .into_iter()
         .map(TryInto::try_into)
@@ -312,20 +298,8 @@ async fn handle_place_fleet(
 
     let mut session = session_arc.lock().unwrap();
     session.place_fleet(player, placements)?;
-    let snapshot = session.snapshot_for(player);
-    let (player_ready, opponent_ready) = session.ready_status(player);
 
-    Ok(ServerMessage::GameState {
-        player,
-        turn: session.current_turn(),
-        status: session.status(),
-        player_board: snapshot.player_board,
-        opponent_board: snapshot.opponent_board,
-        player_fleet: snapshot.player_fleet,
-        opponent_fleet: snapshot.opponent_fleet,
-        player_ready,
-        opponent_ready,
-    })
+    Ok(())
 }
 
 async fn handle_fire(
@@ -351,11 +325,7 @@ async fn handle_rematch(
 }
 
 fn map_error_to_message(e: ApiError) -> ServerMessage {
-    let message = match e {
-        ApiError::Game(GameError::NotPlayersTurn) => "Not your turn",
-        ApiError::InvalidCoordinates => "Invalid coordinates",
-        _ => "Internal error",
-    };
+    let (_, message) = e.status_message();
 
     ServerMessage::Error {
         message: message.to_string(),

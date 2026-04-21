@@ -40,7 +40,7 @@ pub struct ErrorResponse {
 }
 
 impl ApiError {
-    fn status_message(&self) -> (StatusCode, &'static str) {
+    pub fn status_message(&self) -> (StatusCode, &'static str) {
         match self {
             ApiError::SessionNotFound => (StatusCode::NOT_FOUND, "Session not found"),
             ApiError::InvalidCoordinates => (StatusCode::BAD_REQUEST, "Invalid coordinate"),
