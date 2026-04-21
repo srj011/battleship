@@ -17,6 +17,10 @@
     const isAbandoned = $gameStore.game?.status.type === 'abandoned';
 
     const opponent_present = $derived($gameStore.game?.opponent_present);
+    const opponentDisconnected = $derived(
+        $gameStore.playerDisconnect &&
+            $gameStore.playerDisconnect.player !== $gameStore.game?.player
+    );
 
     $effect(() => {
         if (!opponent_present) {
@@ -62,12 +66,13 @@
                 </div>
                 {#if !isAbandoned}
                     <button
-                        class="cursor-pointer rounded-sm bg-gray-900/90 px-4
+                        class={`cursor-pointer rounded-sm px-4
                         py-2 text-sm font-semibold text-white uppercase
-                        hover:bg-gray-800/80"
+                        ${opponentDisconnected ? 'bg-gray-900/50' : 'bg-gray-900/90  hover:bg-gray-800/80'}`}
                         hidden={!opponent_present}
                         onclick={handleRematch}
-                        disabled={$gameStore.game.rematch_state.type === 'requested'}
+                        disabled={$gameStore.game.rematch_state.type === 'requested' ||
+                            opponentDisconnected}
                     >
                         Play Again
                     </button>

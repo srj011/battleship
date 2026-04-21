@@ -80,6 +80,10 @@
     });
 
     const phase = $derived($gameStore.game?.status.type);
+    const opponentDisconnected = $derived(
+        $gameStore.playerDisconnect &&
+            $gameStore.playerDisconnect.player !== $gameStore.game?.player
+    );
 </script>
 
 <div class="flex flex-1 justify-center gap-6 p-4">
@@ -93,7 +97,9 @@
         <FinishedPhase />
     {/if}
 
-    {#if $gameStore.playerDisconnect && $gameStore.playerDisconnect.player !== $gameStore.game?.player && seconds > 0}
-        <DisconnectOverlay {seconds} />
+    {#if phase === 'placing_ships' || phase === 'ongoing'}
+        {#if opponentDisconnected && seconds > 0}
+            <DisconnectOverlay {seconds} />
+        {/if}
     {/if}
 </div>

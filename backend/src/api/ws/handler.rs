@@ -196,17 +196,6 @@ async fn handle_socket(
                     None => {
                         info!(event = "disconnected");
 
-                        {
-                            let mut session = session_arc.lock().unwrap();
-                            if matches!(
-                                session.status(),
-                                GameStatus::Finished{ .. } | GameStatus::Abandoned{ .. }
-                            ) {
-                                session.handle_leave(player);
-                                break;
-                            }
-                        }
-
                         let spawned_at = {
                             let mut session = session_arc.lock().unwrap();
                             session.mark_disconnected(player);

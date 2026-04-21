@@ -30,6 +30,10 @@
 
     const opponent_ready = $derived($gameStore.game?.opponent_ready);
     const opponent_present = $derived($gameStore.game?.opponent_present);
+    const opponentDisconnected = $derived(
+        $gameStore.playerDisconnect &&
+            $gameStore.playerDisconnect.player !== $gameStore.game?.player
+    );
 
     function copyGameLink() {
         const value = page.params.code ?? '';
@@ -94,7 +98,10 @@
                     <div class="flex items-center gap-2 font-semibold text-gray-400 uppercase">
                         {#if page.params.code}
                             {#if opponent_present}
-                                {#if opponent_ready}
+                                {#if opponentDisconnected}
+                                    <Icon icon="mdi:hourglass" width="15" />
+                                    <span>OPPONENT: DISCONNECTED</span>
+                                {:else if opponent_ready}
                                     <Icon
                                         icon="material-symbols:check-circle-rounded"
                                         width="15"
