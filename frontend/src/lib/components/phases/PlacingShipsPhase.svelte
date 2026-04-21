@@ -1,7 +1,7 @@
 <script lang="ts">
     import { sendWS } from '$lib/api/websocket';
     import { gameStore } from '$lib/stores/game';
-    import Board from '$lib/components/Board.svelte';
+    import Board from '$lib/components/game/Board.svelte';
     import { BOARD_SIZE, SHIP_LENGTHS, TOTAL_SHIPS } from '$lib/game/config';
     import type {
         ClientMessage,

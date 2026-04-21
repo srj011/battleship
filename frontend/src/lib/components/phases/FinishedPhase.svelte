@@ -1,9 +1,9 @@
 <script lang="ts">
     import { gameStore } from '$lib/stores/game';
     import { sendWS } from '$lib/api/websocket';
-    import Board from '$lib/components/Board.svelte';
-    import Fleet from '$lib/components/Fleet.svelte';
     import type { ClientMessage } from '$lib/types';
+    import Board from '$lib/components/game/Board.svelte';
+    import Fleet from '$lib/components/game/Fleet.svelte';
     import Icon from '@iconify/svelte';
 
     const playerFleet = $derived($gameStore.game?.player_fleet);

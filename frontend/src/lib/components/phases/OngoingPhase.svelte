@@ -1,8 +1,8 @@
 <script lang="ts">
     import { sendWS } from '$lib/api/websocket';
     import { gameStore } from '$lib/stores/game';
-    import Board from '$lib/components/Board.svelte';
-    import Fleet from '$lib/components/Fleet.svelte';
+    import Board from '$lib/components/game/Board.svelte';
+    import Fleet from '$lib/components/game/Fleet.svelte';
     import type { CellView, Coord, FireMessage, PreviewCell } from '$lib/types';
 
     const playerFleet = $derived($gameStore.game?.player_fleet);

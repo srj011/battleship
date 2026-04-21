@@ -49,7 +49,7 @@
             case 'ship':
                 return 'bg-indigo-500/90';
             case 'hit':
-                return 'bg-red-500';
+                return 'bg-red-500/90';
             case 'miss':
                 return 'bg-gray-400/75';
             case 'blocked':
@@ -90,7 +90,7 @@
                 if (cell.type === 'ship' || cell.type === 'placed') {
                     classes += ` ${cls} border-indigo-600`;
                 } else if (cell.type === 'hit' || cell.type === 'preview-invalid') {
-                    classes += ` ${cls} border-red-600`;
+                    classes += ` ${cls} border-red-600/80`;
                 } else {
                     classes += ` ${cls} border-green-600`;
                 }
