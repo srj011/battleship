@@ -9,6 +9,7 @@
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
+    import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
     import NotificationStack from '$lib/components/notification/NotificationStack.svelte';
     import LeaveGame from '$lib/components/LeaveGame.svelte';
     import { Button } from '$lib/components/ui/button';
@@ -151,6 +152,7 @@
     <main class="flex flex-1 p-4">
         <NotificationStack />
         {@render children()}
+        <ConnectionStatus />
     </main>
 
     <!-- Footer -->
