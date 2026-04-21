@@ -3,7 +3,7 @@
     import { page } from '$app/state';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
-    import { connectWS, disconnectWS, leaveGame } from '$lib/api/websocket';
+    import { leaveGame } from '$lib/api/websocket';
     import { fade } from 'svelte/transition';
 
     import * as Alert from '$lib/components/ui/alert';
