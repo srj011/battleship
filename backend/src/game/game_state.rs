@@ -5,7 +5,7 @@ use super::errors::GameError;
 use super::player::{Player, ShotOutcome, ShotResult};
 use super::ship::ShipPlacement;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Turn {
     Player1,

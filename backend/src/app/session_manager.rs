@@ -2,6 +2,7 @@ use rand::RngExt;
 use rand::distr::slice::Choose;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 use super::game_session::{GameMode, GameSession};
@@ -46,5 +47,31 @@ impl SessionManager {
             .take(6)
             .map(|b| *b as char)
             .collect()
+    }
+
+    pub fn cleanup(&mut self) {
+        let now = Instant::now();
+        let inactivity_timeout = Duration::from_secs(1200); // 20 mins
+        let max_age = Duration::from_secs(3600); // 1 hr
+
+        self.sessions.retain(|code, session_arc| {
+            let session = session_arc.lock().unwrap();
+
+            if matches!(
+                session.status(),
+                GameStatus::Finished { .. } | GameStatus::Abandoned { .. }
+            ) || now.duration_since(session.last_activity()) > inactivity_timeout
+                || now.duration_since(session.created_at()) > max_age
+            {
+                eprintln!("{code}: session removed");
+                false
+            } else {
+                true
+            }
+        });
+    }
+
+    pub fn count(&self) -> usize {
+        self.sessions.len()
     }
 }

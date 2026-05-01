@@ -95,6 +95,8 @@ pub struct GameSession {
     history: Vec<TurnEvent>,
     tx: broadcast::Sender<GameUpdate>,
     rematch: RematchState,
+    created_at: Instant,
+    last_activity: Instant,
     disconnected: HashMap<Turn, Instant>,
 }
 
@@ -136,13 +138,20 @@ impl GameSession {
                 history: Vec::new(),
                 tx,
                 rematch: RematchState::Idle,
+                created_at: Instant::now(),
+                last_activity: Instant::now(),
                 disconnected: HashMap::with_capacity(2),
             },
             player1_token,
         )
     }
 
+    pub fn touch(&mut self) {
+        self.last_activity = Instant::now();
+    }
+
     fn restart_game(&mut self) -> Result<(), GameError> {
+        self.touch();
         match self.game.status() {
             GameStatus::Finished { .. } | GameStatus::Abandoned { .. } => {}
             _ => return Err(GameError::InvalidGameState),
@@ -170,6 +179,7 @@ impl GameSession {
     }
 
     pub fn request_rematch(&mut self, player: Turn) -> Result<(), GameError> {
+        self.touch();
         match self.game.status() {
             GameStatus::Finished { .. } | GameStatus::Abandoned { .. } => {}
             _ => return Err(GameError::InvalidGameState),
@@ -199,6 +209,7 @@ impl GameSession {
     }
 
     pub fn cancel_rematch(&mut self, player: Turn) {
+        self.touch();
 
         if let RematchState::Requested { by } = self.rematch {
             if by == player {
@@ -211,6 +222,7 @@ impl GameSession {
     }
 
     pub fn reject_rematch(&mut self, player: Turn) {
+        self.touch();
 
         if let RematchState::Requested { by } = self.rematch {
             if by != player {
@@ -263,6 +275,14 @@ impl GameSession {
         }
     }
 
+    pub fn created_at(&self) -> Instant {
+        self.created_at
+    }
+
+    pub fn last_activity(&self) -> Instant {
+        self.last_activity
+    }
+
     pub fn mark_disconnected(&mut self, player: Turn) {
         if self.is_disconnected(player) {
             return;
@@ -283,6 +303,7 @@ impl GameSession {
     }
 
     pub fn mark_reconnected(&mut self, player: Turn) {
+        self.touch();
         if self.disconnected.remove(&player).is_some() {
             self.send_broadcast(GameUpdate::PlayerReconnected { player });
             self.send_broadcast(GameUpdate::StateChanged);
@@ -298,6 +319,7 @@ impl GameSession {
     }
 
     pub fn join_player(&mut self) -> Result<Uuid, GameError> {
+        self.touch();
         match self.player2 {
             PlayerSlot::Empty => {
                 let player_token = Uuid::new_v4();
@@ -346,6 +368,8 @@ impl GameSession {
         player: Turn,
         placements: Vec<ShipPlacement>,
     ) -> Result<(), GameError> {
+        self.touch();
+
         self.game.place_fleet(player, placements)?;
 
         self.send_broadcast(GameUpdate::StateChanged);
@@ -357,6 +381,8 @@ impl GameSession {
         acting_player: Turn,
         coord: Coord,
     ) -> Result<TurnOutcome, GameError> {
+        self.touch();
+
         let mut events = Vec::new();
 
         // Player turn
