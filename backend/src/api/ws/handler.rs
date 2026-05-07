@@ -9,6 +9,8 @@ use futures::{SinkExt, StreamExt, stream::SplitSink};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::broadcast;
+use tokio::time;
+use tracing::{debug, error, info, instrument, warn};
 
 use crate::api::errors::ApiError;
 use crate::api::types::{ApiCoord, ApiShipPlacement, WsQuery};
@@ -16,7 +18,7 @@ use crate::api::ws::messages::{ClientMessage, ServerMessage};
 use crate::app::game_session::{GameSession, GameUpdate};
 use crate::app::session_manager::SessionManager;
 use crate::game::coord::Coord;
-use crate::game::game_state::{GameStatus, Turn};
+use crate::game::game_state::Turn;
 use crate::game::player::Player;
 use crate::game::ship::ShipPlacement;
 
@@ -43,6 +45,7 @@ pub async fn ws_handler(
     Ok(ws.on_upgrade(move |socket| handle_socket(socket, code, player, manager)))
 }
 
+#[instrument(name = "ws", skip_all, fields(game=%game_code, player=?player))]
 async fn handle_socket(
     socket: WebSocket,
     game_code: String,
@@ -66,7 +69,7 @@ async fn handle_socket(
             (session_arc, rx)
         }
         None => {
-            eprintln!("[WS] Error: Session not found");
+            warn!("session not found");
 
             let error_msg = ServerMessage::Error {
                 message: "Session Not Found".into(),
@@ -88,9 +91,9 @@ async fn handle_socket(
     };
 
     if is_reconnect {
-        eprintln!("[WS] Connected: {game_code} as {player:?}");
+        info!(event = "reconnected");
     } else {
-        eprintln!("[WS] Reconnected: {game_code} as {player:?}");
+        info!(event = "connected");
     }
 
     // Initial message
@@ -125,24 +128,25 @@ async fn handle_socket(
                     Some(Ok(Message::Text(text))) => {
                         match serde_json::from_str::<ClientMessage>(&text) {
                             Ok(ClientMessage::Fire { coord }) => {
-                                if let Err(e) = handle_fire(session_arc.clone(), player, coord).await {
-                                    eprintln!("[WS] error: {e:?}");
-                                    let server_msg = map_error_to_message(e);
+                                debug!(action = "fire", row = coord.row, col = coord.col);
+                                if let Err(err) = handle_fire(session_arc.clone(), player, coord).await {
+                                    error!(?err, "fire handling failed");
+                                    let server_msg = map_error_to_message(err);
                                     let error_msg = to_ws_message(server_msg);
                                     send_ws(&mut sender, error_msg).await;
                                 }
                             },
 
                             Ok(ClientMessage::RandomFleet) => {
-                                eprintln!("[WS] Random Fleet requested");
+                                info!(msg="random_fleet", "message received");
                                 let message = handle_random_fleet().await;
                                 send_ws(&mut sender, to_ws_message(message)).await;
                             },
 
                             Ok(ClientMessage::PlaceFleet { fleet }) => {
-                                eprintln!("[WS] Fleet placement requested");
+                                info!(msg="place_fleet", "message received");
                                 if let Err(err) = handle_place_fleet(session_arc.clone(), player, fleet).await {
-                                    eprintln!("[WS] Placement error: {e:?}");
+                                    error!(?err, "placement error");
                                     let server_msg = map_error_to_message(err);
                                     let error_msg = to_ws_message(server_msg);
                                     send_ws(&mut sender, error_msg).await;
@@ -150,7 +154,9 @@ async fn handle_socket(
                             },
 
                             Ok(ClientMessage::RequestRematch) => {
+                                info!(msg="request_rematch", "message received");
                                 if let Err(err) = handle_rematch(session_arc.clone(), player).await {
+                                    error!(?err, "rematch error");
                                     let server_msg = map_error_to_message(err);
                                     let error_msg = to_ws_message(server_msg);
                                     send_ws(&mut sender, error_msg).await;
@@ -158,6 +164,7 @@ async fn handle_socket(
                             }
 
                             Ok(ClientMessage::CancelRematch) => {
+                                info!(msg="cancel_rematch", "message received");
                                 {
                                     let mut session = session_arc.lock().unwrap();
                                     session.cancel_rematch(player);
@@ -165,6 +172,7 @@ async fn handle_socket(
                             }
 
                             Ok(ClientMessage::RejectRematch) => {
+                                info!(msg="reject_rematch", "message received");
                                 {
                                     let mut session = session_arc.lock().unwrap();
                                     session.reject_rematch(player);
@@ -172,6 +180,7 @@ async fn handle_socket(
                             }
 
                             Ok(ClientMessage::LeaveGame) => {
+                                info!(msg="leave_game", "message received");
                                 {
                                     let mut session = session_arc.lock().unwrap();
                                     session.handle_leave(player);
@@ -180,17 +189,20 @@ async fn handle_socket(
                                 if let Err(e) = sender.close().await {
                                     debug!(?e, "failed to close socket");
                                 }
+                                info!(event = "disconnected");
                                 return;
                             }
 
                             Err(err) => {
-                                eprintln!("Invalid message: {err}");
+                                warn!(?err, "invalid message");
+                                let error_msg = map_error_to_message(ApiError::InvalidMessage);
+                                send_ws(&mut sender, to_ws_message(error_msg)).await;
                             }
                         }
                     },
                     Some(Ok(_)) => {},
                     Some(Err(err)) => {
-                        eprintln!("[WS] error: {err}");
+                        error!(?err, "ws error");
                         break;
                     },
                     None => {
@@ -265,7 +277,7 @@ async fn handle_socket(
                         send_ws(&mut sender, to_ws_message(message)).await;
                     },
                     Err(broadcast::error::RecvError::Lagged(_)) => {
-                        eprintln!("[WS] lagged");
+                        warn!("broadcast lagged");
                         continue;
                     }
                     Err(_) => break,
@@ -285,7 +297,6 @@ async fn handle_random_fleet() -> ServerMessage {
     let fleet = Player::generate_random_fleet();
     let api_fleet: Vec<ApiShipPlacement> = fleet.into_iter().map(Into::into).collect();
 
-    eprintln!("[WS] Random fleet generated");
     ServerMessage::RandomFleet { fleet: api_fleet }
 }
 
@@ -339,7 +350,10 @@ fn map_error_to_message(e: ApiError) -> ServerMessage {
 fn to_ws_message(message: ServerMessage) -> Message {
     Message::Text(
         serde_json::to_string(&message)
-            .unwrap_or_else(|_| "{\"type\":\"error\", \"message\":\"internal\"}".into())
+            .unwrap_or_else(|err| {
+                warn!(error = ?err, "serde_serialization_failed");
+                "{\"type\":\"error\", \"message\":\"internal\"}".into()
+            })
             .into(),
     )
 }

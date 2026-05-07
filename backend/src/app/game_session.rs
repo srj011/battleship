@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::broadcast;
+use tracing::{debug, info, instrument, warn};
 use uuid::Uuid;
 
 use crate::app::board_view::{BoardPerspective, BoardView};
@@ -101,13 +102,17 @@ pub struct GameSession {
 }
 
 impl GameSession {
+    #[instrument(name = "game_session", skip_all, fields(game = %game_code, ?mode))]
     pub fn new(game_code: String, mode: GameMode) -> (Self, Uuid) {
+        info!(event = "session_created");
 
         let player1_state = Player::new();
         let player1_token = Uuid::new_v4();
         let player1 = PlayerSlot::Human {
             token: player1_token,
         };
+
+        info!(event = "player joined", player = ?Turn::Player1);
 
         let player2_state = Player::new();
 
@@ -122,6 +127,7 @@ impl GameSession {
                 game.place_fleet(Turn::Player2, ai_fleet)
                     .expect("AI fleet placement failed");
 
+                info!(event = "player joined", player = ?Turn::Player2);
 
                 (PlayerSlot::AI, ai)
             }
@@ -150,6 +156,7 @@ impl GameSession {
         self.last_activity = Instant::now();
     }
 
+    #[instrument(name = "game_session", parent = None, skip_all, fields(game = %self.game_code, ?self.mode))]
     fn restart_game(&mut self) -> Result<(), GameError> {
         self.touch();
         match self.game.status() {
@@ -173,11 +180,13 @@ impl GameSession {
 
         self.rematch = RematchState::Idle;
 
+        info!(event = "game_restarted");
 
         self.send_broadcast(GameUpdate::StateChanged);
         Ok(())
     }
 
+    #[instrument(name = "game_session", parent = None, skip_all, fields(game = %self.game_code, ?self.mode))]
     pub fn request_rematch(&mut self, player: Turn) -> Result<(), GameError> {
         self.touch();
         match self.game.status() {
@@ -203,11 +212,13 @@ impl GameSession {
                 }
             }
         }
+        info!(event = "rematch_requested", ?player);
         self.send_broadcast(GameUpdate::StateChanged);
 
         Ok(())
     }
 
+    #[instrument(name = "game_session", parent = None, skip_all, fields(game = %self.game_code, ?self.mode))]
     pub fn cancel_rematch(&mut self, player: Turn) {
         self.touch();
 
@@ -215,12 +226,14 @@ impl GameSession {
             if by == player {
                 self.rematch = RematchState::Idle;
 
+                info!(event = "rematch_cancelled", ?player);
                 self.send_broadcast(GameUpdate::StateChanged);
                 self.send_broadcast(GameUpdate::RematchCancelled { player });
             }
         }
     }
 
+    #[instrument(name = "game_session", parent = None, skip_all, fields(game = %self.game_code, ?self.mode))]
     pub fn reject_rematch(&mut self, player: Turn) {
         self.touch();
 
@@ -228,6 +241,7 @@ impl GameSession {
             if by != player {
                 self.rematch = RematchState::Idle;
 
+                info!(event = "rematch_rejected", ?player);
                 self.send_broadcast(GameUpdate::StateChanged);
                 self.send_broadcast(GameUpdate::RematchRejected { player });
             }
@@ -262,6 +276,7 @@ impl GameSession {
         self.tx.subscribe()
     }
 
+    #[instrument(name = "game_session", parent = None, skip_all, fields(game = %self.game_code, ?self.mode))]
     fn send_broadcast(&self, msg: GameUpdate) {
         if let Err(e) = self.tx.send(msg.clone()) {
             warn!(error = ?e, broadcast = ?msg, "broadcast failed");
@@ -283,12 +298,15 @@ impl GameSession {
         self.last_activity
     }
 
+    #[instrument(name = "game_session", parent = None, skip_all, fields(game = %self.game_code, ?self.mode))]
     pub fn mark_disconnected(&mut self, player: Turn) {
         if self.is_disconnected(player) {
             return;
         }
 
         self.disconnected.insert(player, Instant::now());
+        info!(event = "player_disconnected", ?player);
+
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -302,9 +320,11 @@ impl GameSession {
         });
     }
 
+    #[instrument(name = "game_session", parent = None, skip_all, fields(game = %self.game_code, ?self.mode))]
     pub fn mark_reconnected(&mut self, player: Turn) {
         self.touch();
         if self.disconnected.remove(&player).is_some() {
+            info!(event = "player_reconnected", ?player);
             self.send_broadcast(GameUpdate::PlayerReconnected { player });
             self.send_broadcast(GameUpdate::StateChanged);
         }
@@ -318,6 +338,7 @@ impl GameSession {
         self.disconnected.get(&player).cloned()
     }
 
+    #[instrument(name = "game_session", parent = None, skip_all, fields(game = %self.game_code, ?self.mode))]
     pub fn join_player(&mut self) -> Result<Uuid, GameError> {
         self.touch();
         match self.player2 {
@@ -327,6 +348,7 @@ impl GameSession {
                     token: player_token,
                 };
 
+                info!(event = "player_joined", player = ?Turn::Player2);
                 self.send_broadcast(GameUpdate::StateChanged);
                 Ok(player_token)
             }
@@ -372,6 +394,7 @@ impl GameSession {
         }
     }
 
+    #[instrument(name = "game", parent = None, skip_all, fields(game = %self.game_code, mode = ?self.mode))]
     pub fn place_fleet(
         &mut self,
         player: Turn,
@@ -381,10 +404,12 @@ impl GameSession {
 
         self.game.place_fleet(player, placements)?;
 
+        info!(event = "fleet_placed", ?player);
         self.send_broadcast(GameUpdate::StateChanged);
         Ok(())
     }
 
+    #[instrument(name = "game_session", parent = None, skip_all, fields(game = %self.game_code, ?self.mode))]
     pub fn player_fire(
         &mut self,
         acting_player: Turn,
@@ -401,26 +426,46 @@ impl GameSession {
         // AI turn
         self.ai_turn()?;
 
+        if let GameStatus::Finished { winner } = self.game.status() {
+            info!(event = "game_finished", winner = ?winner);
+        }
+
         Ok(TurnOutcome {
             events,
             status: self.game.status(),
         })
     }
 
-    pub fn fire_once(&mut self, acting_player: Turn, coord: Coord) -> Result<TurnEvent, GameError> {
+    #[instrument(
+        name = "game",
+        parent = None,
+        skip_all,
+        fields(
+            game=%self.game_code,
+            mode=?self.mode,
+            player=?acting_player,
+            row=coord.row(),
+            col=coord.col()
+        )
+    )]
+    fn fire_once(&mut self, acting_player: Turn, coord: Coord) -> Result<TurnEvent, GameError> {
         if acting_player != self.game.current_turn() {
             return Err(GameError::NotPlayersTurn);
         }
 
         let event = self.record_turn(acting_player, coord)?;
 
+        debug!(
+            event = "shot_fired",
+            result = ?event.outcome.result
+        );
         self.send_broadcast(GameUpdate::ShotFired {
             event: event.clone(),
         });
         Ok(event)
     }
 
-    pub fn ai_turn(&mut self) -> Result<(), GameError> {
+    fn ai_turn(&mut self) -> Result<(), GameError> {
         let Some(mut ai) = self.ai.take() else {
             return Ok(());
         };
@@ -450,6 +495,7 @@ impl GameSession {
         self.send_broadcast(GameUpdate::StateChanged);
     }
 
+    #[instrument(name = "game_session", parent = None, skip_all, fields(game = %self.game_code, ?self.mode))]
     fn remove_player(&mut self, player: Turn) {
         match player {
             Turn::Player1 => {
@@ -466,6 +512,7 @@ impl GameSession {
         info!(event = "player_left", ?player);
     }
 
+    #[instrument(name = "game_session", parent = None, skip_all, fields(game = %self.game_code, ?self.mode))]
     fn handle_abandon(&mut self, leaver: Turn) {
         match self.game.status() {
             GameStatus::Ongoing => {

@@ -3,6 +3,7 @@ use rand::distr::slice::Choose;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use tracing::info;
 use uuid::Uuid;
 
 use super::game_session::{GameMode, GameSession};
@@ -63,7 +64,7 @@ impl SessionManager {
             ) || now.duration_since(session.last_activity()) > inactivity_timeout
                 || now.duration_since(session.created_at()) > max_age
             {
-                eprintln!("{code}: session removed");
+                info!(event = "session_removed", game = %code);
                 false
             } else {
                 true

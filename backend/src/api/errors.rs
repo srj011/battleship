@@ -37,7 +37,7 @@ impl From<axum::Error> for ApiError {
 
 #[derive(Serialize)]
 #[serde(rename_all = "snake_case")]
-enum ErrorCode {
+pub enum ErrorCode {
     SessionNotFound,
     InvalidPlayer,
     InvalidMessage,

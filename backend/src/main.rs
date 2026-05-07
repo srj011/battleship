@@ -1,20 +1,44 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use time::macros::format_description;
 use tokio::time::interval;
 use tower_http::cors::CorsLayer;
+use tracing::{debug, info, instrument, warn};
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::fmt::time::LocalTime;
 
 use battleship::api::routes::create_router;
 use battleship::app::session_manager::SessionManager;
 
+fn init_tracing() {
+    let timer = LocalTime::new(format_description!(
+        "[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]"
+    ));
+
+    tracing_subscriber::fmt()
+        .with_timer(timer)
+        .with_env_filter(
+            EnvFilter::from_default_env()
+                .add_directive("battleship=debug".parse().unwrap())
+                .add_directive("info".parse().unwrap()),
+        )
+        .with_file(false)
+        .with_line_number(false)
+        .with_target(false)
+        .try_init()
+        .expect("Failed to initialize tracing");
+}
+
+#[instrument(name = "cleanup", skip(manager), fields(interval_secs = 300))]
 async fn cleanup(manager: Arc<Mutex<SessionManager>>) {
-    eprintln!("Cleanup task started");
+    info!("task started");
 
     let mut interval = interval(Duration::from_secs(300));
     interval.tick().await;
 
     loop {
         interval.tick().await;
-        eprintln!("running cleanup");
+        debug!("running cleanup");
 
         if let Ok(mut manager) = manager.lock() {
             let before = manager.count();
@@ -22,16 +46,19 @@ async fn cleanup(manager: Arc<Mutex<SessionManager>>) {
             let removed = before - manager.count();
 
             if removed > 0 {
-                eprintln!(removed, "expired sessions removed")
+                info!(removed, "expired sessions removed")
             }
         } else {
-            eprintln!("cleanup lock poisoned");
+            warn!("cleanup lock poisoned");
         }
     }
 }
 
 #[tokio::main]
 async fn main() {
+    init_tracing();
+    info!("server starting...");
+
     let manager = Arc::new(Mutex::new(SessionManager::new()));
 
     //Cleanup
