@@ -351,13 +351,22 @@ impl GameSession {
             Turn::Player2 => true,
         };
 
+        let is_finished = matches!(self.status(), GameStatus::Finished { .. });
+
         GameSnapshot {
             turn: self.current_turn(),
             history: self.history.clone(),
             status: self.status(),
             opponent_present,
             player_board: BoardView::new(player.board(), BoardPerspective::Owner),
-            opponent_board: BoardView::new(opponent.board(), BoardPerspective::Opponent),
+            opponent_board: BoardView::new(
+                opponent.board(),
+                if is_finished {
+                    BoardPerspective::Owner
+                } else {
+                    BoardPerspective::Opponent
+                },
+            ),
             player_fleet: FleetView::from_fleet(player.ships(), FleetPerspective::Owner),
             opponent_fleet: FleetView::from_fleet(opponent.ships(), FleetPerspective::Opponent),
         }
