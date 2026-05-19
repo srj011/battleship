@@ -15,6 +15,7 @@ pub enum ClientMessage {
     RequestRematch,
     CancelRematch,
     RejectRematch,
+    Ping,
     LeaveGame,
 }
 
@@ -61,6 +62,8 @@ pub enum ServerMessage {
     RematchRejected {
         player: Turn,
     },
+
+    Pong,
 
     Error {
         message: String,

@@ -11,12 +11,39 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let currentCode: string | null = null;
 let currentToken: string | null = null;
 
+let heartbeatInterval: number | null = null;
+let lastPong = Date.now();
+
 const MAX_RECONNECT_ATTEMPTS = 10;
 
 function getReconnectDelay(attempt: number): number {
     const base = Math.min(30_000, Math.pow(2, attempt) * 1000);
     const jitter = Math.random() * 1000;
     return base + jitter;
+}
+
+function startHeartbeat() {
+    stopHeartbeat();
+
+    heartbeatInterval = window.setInterval(() => {
+        if (socket?.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        sendWS({ type: 'ping' });
+
+        if (Date.now() - lastPong > 30_000) {
+            console.warn('heartbeat timeout');
+            socket.close();
+        }
+    }, 10_000);
+}
+
+function stopHeartbeat() {
+    if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+    }
+    heartbeatInterval = null;
 }
 
 export function connectWS(code: string, token: string) {
@@ -48,10 +75,15 @@ export function connectWS(code: string, token: string) {
         console.log('[WS] Connected');
 
         gameStore.dispatch({ type: 'CONNECTED' });
+
+        lastPong = Date.now();
+        startHeartbeat();
     };
 
     socket.onclose = (event) => {
         console.log('[WS] Disconnected', event.code);
+
+        stopHeartbeat();
 
         socket = null;
         const connection = get(gameStore).connection;
@@ -133,6 +165,10 @@ export function connectWS(code: string, token: string) {
                 gameStore.setRandomFleet(msg.fleet);
                 break;
 
+            case 'pong':
+                lastPong = Date.now();
+                break;
+
             case 'error':
                 console.error('[WS] Error: ', msg.message);
                 break;
@@ -142,6 +178,7 @@ export function connectWS(code: string, token: string) {
     socket.onerror = (err) => {
         console.error('[WS] Error: ', err);
         socket?.close();
+        stopHeartbeat();
     };
 }
 
@@ -205,6 +242,7 @@ export function disconnectWS() {
         clearTimeout(reconnectTimer);
         reconnectTimer = null;
     }
+    stopHeartbeat();
 }
 
 export function leaveGame() {

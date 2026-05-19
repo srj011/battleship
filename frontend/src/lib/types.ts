@@ -132,6 +132,10 @@ export type RematchRejected = {
     player: Player;
 };
 
+export type Pong = {
+    type: 'pong';
+};
+
 export type ErrorMessage = {
     type: 'error';
     message: string;
@@ -145,6 +149,7 @@ export type ServerMessage =
     | PlayerReconnected
     | RematchCancelled
     | RematchRejected
+    | Pong
     | ErrorMessage;
 /* ----------------------------------------------------------------------------------- */
 
@@ -180,6 +185,10 @@ export type LeaveGameMessage = {
     type: 'leave_game';
 };
 
+export type Ping = {
+    type: 'ping';
+};
+
 export type ClientMessage =
     | RandomFleetMessage
     | PlaceFleetMessage
@@ -187,7 +196,8 @@ export type ClientMessage =
     | RequestRematchMessage
     | CancelRematchMessage
     | RejectRematchMessage
-    | LeaveGameMessage;
+    | LeaveGameMessage
+    | Ping;
 /* ----------------------------------------------------------------------------------- */
 
 export type ConnectionState =

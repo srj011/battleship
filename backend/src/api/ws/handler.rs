@@ -7,9 +7,9 @@ use axum::{
 };
 use futures::{SinkExt, StreamExt, stream::SplitSink};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::broadcast;
-use tokio::time;
+use tokio::time::{interval, sleep};
 use tracing::{debug, error, info, instrument, warn};
 
 use crate::api::errors::ApiError;
@@ -21,6 +21,9 @@ use crate::game::coord::Coord;
 use crate::game::game_state::Turn;
 use crate::game::player::Player;
 use crate::game::ship::ShipPlacement;
+
+const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(10);
+const HEARTBEAT_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -120,9 +123,21 @@ async fn handle_socket(
 
     let _ = sender.send(to_ws_message(initial_message)).await;
 
+    let mut last_client_ping = Instant::now();
+    let mut heartbeat = interval(HEARTBEAT_INTERVAL);
+
     // Event loop
     loop {
         tokio::select! {
+            // HEARTBEAT
+            _ = heartbeat.tick() => {
+                if last_client_ping.elapsed() > HEARTBEAT_TIMEOUT {
+                    warn!(event="heartbeat_timeout");
+                    break;
+                }
+            }
+
+            // CLIENT -> SERVER
             msg = receiver.next() => {
                 match msg {
                     Some(Ok(Message::Text(text))) => {
@@ -193,6 +208,14 @@ async fn handle_socket(
                                 return;
                             }
 
+                            Ok(ClientMessage::Ping) => {
+                                last_client_ping = Instant::now();
+                                debug!(event="ping_received");
+
+                                send_ws(&mut sender, to_ws_message(ServerMessage::Pong)).await;
+                                debug!(event="pong_sent");
+                            }
+
                             Err(err) => {
                                 warn!(?err, "invalid message");
                                 let error_msg = map_error_to_message(ApiError::InvalidMessage);
@@ -218,7 +241,7 @@ async fn handle_socket(
 
                         info!(event = "abandon_timer_started", timeout = 30);
                         tokio::spawn(async move {
-                            time::sleep(Duration::from_secs(30)).await;
+                            sleep(Duration::from_secs(30)).await;
 
                             let mut session = session_clone.lock().unwrap();
 
@@ -233,6 +256,8 @@ async fn handle_socket(
                     }
                 }
             }
+
+            // SERVER -> CLIENT
             update = rx.recv() => {
                 match update {
                     Ok(update) => {
