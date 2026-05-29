@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::game::coord::Coord;
+use super::coord::Coord;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -16,6 +16,23 @@ pub struct ShipPlacement {
     pub ship_type: ShipType,
     pub start: Coord,
     pub direction: Direction,
+}
+
+impl ShipPlacement {
+    pub fn coords(&self) -> Vec<Coord> {
+        (0..self.ship_type.length()).map(|i| {
+            match self.direction {
+                Direction::Horizontal => Coord::new(
+                    self.start.row(),
+                    self.start.col() + i as usize
+                ),
+                Direction::Vertical => Coord::new(
+                    self.start.row() + i as usize,
+                    self.start.col()
+                )
+            }
+        }).collect()
+    }
 }
 
 impl ShipType {
