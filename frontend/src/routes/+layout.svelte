@@ -35,6 +35,26 @@
             $gameStore.playerDisconnect.player !== $gameStore.game?.player
     );
 
+    const status = $derived.by(() => {
+        switch ($apiHealth) {
+            case 'checking':
+                return {
+                    text: 'CHECKING',
+                    color: 'text-yellow-400'
+                };
+            case 'online':
+                return {
+                    text: 'ONLINE',
+                    color: 'text-primary'
+                };
+            default:
+                return {
+                    text: 'OFFLINE',
+                    color: 'text-destructive'
+                };
+        }
+    });
+
     function copyGameLink() {
         const value = page.params.code ?? '';
         navigator.clipboard.writeText(value);
@@ -48,8 +68,8 @@
 
 <div class="flex min-h-screen flex-col">
     <!-- Header -->
-    <header class="bg-gray-900 text-white">
-        <div class="grid grid-cols-3 items-center px-6 py-3">
+    <header class="border-b bg-background/80 backdrop-blur-md">
+        <div class="grid grid-cols-3 items-center px-6 py-4">
             <!-- Left -->
             <div class="flex items-center gap-4">
                 <Logo />
@@ -129,15 +149,13 @@
                     {/if}
 
                     <div class="flex items-center gap-1 font-semibold text-gray-300 uppercase">
-                        <Icon icon="fluent-mdl2:status-circle-sync" font-size="25" />
-                        <span>SERVER:</span>
-                        <span
-                            >{$apiHealth === 'checking'
-                                ? 'CHECKING'
-                                : $apiHealth === 'online'
-                                  ? 'ONLINE'
-                                  : 'OFFLINE'}</span
-                        >
+                        <Icon
+                            icon="material-symbols:sync-rounded"
+                            font-size="18"
+                            class="{status.color}/80"
+                        />
+                        <span class="text-muted-foreground">SERVER:</span>
+                        <span class="{status.color}/80">{status.text}</span>
                     </div>
                 </div>
                 {#if page.params.code}
@@ -166,7 +184,9 @@
     </main>
 
     <!-- Footer -->
-    <footer class="flex items-center justify-center gap-4 border-t border-neutral-600 py-3 text-sm">
+    <footer
+        class="flex items-center justify-center gap-4 border-t bg-surface py-2 text-xs text-muted-foreground"
+    >
         <div class="flex items-center gap-4">
             <span>© 2026 Battleship</span>
             <span>•</span>
@@ -177,7 +197,7 @@
                 target="_blank"
                 rel="noopener noreferrer"
             >
-                <Icon icon="mdi:github" class="h-5 w-5" />
+                <Icon icon="mdi:github" class="h-4 w-4" />
             </a>
         </div>
     </footer>
