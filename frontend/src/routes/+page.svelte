@@ -70,54 +70,60 @@
     }
 </script>
 
-<div class="flex flex-1 flex-col items-center justify-center gap-20">
+<div class="flex flex-1 flex-col items-center justify-center gap-24">
     <!-- Hero section -->
     <section class="flex flex-col gap-6 text-center">
         <h1 class="text-6xl font-bold uppercase">
-            BATTLESHIP <span>ONLINE</span>
+            BATTLESHIP <span class="text-primary">ONLINE</span>
         </h1>
-        <p class="max-w-xl text-base">A turn-based naval strategy game played on a hidden grid.</p>
+        <p class="max-w-xl text-base text-foreground/75">
+            A turn-based naval strategy game played on a hidden grid.
+        </p>
     </section>
 
     <!-- Action Buttons -->
-    <section class="grid w-full max-w-3xl grid-cols-2 gap-4">
+    <section class="grid w-full max-w-4xl grid-cols-2 gap-4 text-xs font-semibold tracking-wider">
         <!-- Play vs AI -->
         <button
-            class="flex cursor-pointer items-center justify-between border border-neutral-800 px-6 py-5"
+            class="glass-panel flex cursor-pointer items-center justify-between border border-primary/20 px-8 py-6"
             onclick={() => handleCreate('ai')}
             disabled={loading}
         >
             <div class="flex items-center gap-4 text-left">
-                <Icon icon="bxs:bot" class="h-6 w-6" /> PLAY VS AI
+                <Icon icon="lucide:bot" class="h-6 w-6 text-primary/80" /> PLAY VS AI
             </div>
             <span>›</span>
         </button>
 
         <!-- Quick Match -->
         <button
-            class="flex cursor-not-allowed items-center justify-between border border-neutral-800 px-6 py-5"
+            class="glass-panel flex cursor-not-allowed items-center justify-between border border-border/20 px-8 py-6"
             disabled={loading}
         >
             <div class="flex items-center gap-4 text-left">
-                <Icon icon="mage:zap-fill" class="h-6 w-6" /> QUICK MATCH (Coming Soon)
+                <Icon icon="mage:zap" class="h-6 w-6" />
+                <div>
+                    QUICK MATCH
+                    <span class="text-muted-foreground">(COMING SOON)</span>
+                </div>
             </div>
-            <span>›</span>
+            <span class="text-base">›</span>
         </button>
 
         <!-- Host Game -->
         <button
-            class="flex cursor-pointer items-center justify-between border border-neutral-800 px-6 py-5"
+            class="glass-panel flex cursor-pointer items-center justify-between border border-border/20 px-8 py-6"
             onclick={() => handleCreate('multiplayer')}
             disabled={loading}
         >
             <div class="flex items-center gap-4 text-left">
-                <Icon icon="mdi:shield-plus" class="h-6 w-6" /> HOST GAME
+                <Icon icon="mdi:shield-plus-outline" class="h-6 w-6" /> HOST GAME
             </div>
             <span>›</span>
         </button>
 
         <!-- Join Game -->
-        <div class="flex items-center border border-neutral-800 px-6 py-5">
+        <div class="glass-panel flex items-center border border-border/20 px-8 py-6">
             <form
                 onsubmit={(e) => {
                     e.preventDefault();
@@ -126,7 +132,7 @@
                 class="flex w-full items-center justify-between"
             >
                 <div class="flex flex-1 items-center gap-4">
-                    <Icon icon="mdi:key" class="h-6 w-6" />
+                    <Icon icon="mdi:key-outline" class="h-6 w-6" />
                     <input
                         bind:value={game_code}
                         placeholder="ENTER CODE"
@@ -135,7 +141,11 @@
                     />
                 </div>
 
-                <button type="submit" disabled={loading} class="ml-4 cursor-pointer text-sm">
+                <button
+                    type="submit"
+                    disabled={loading}
+                    class="ml-4 cursor-pointer text-xs tracking-wider text-primary/70"
+                >
                     JOIN
                 </button>
             </form>
@@ -143,20 +153,26 @@
     </section>
 
     <!-- Info section -->
-    <section class="grid w-full max-w-5xl grid-cols-3 gap-12 text-sm">
-        <div class="flex flex-col gap-2 border-l border-neutral-800 px-3 py-2">
+    <section
+        class="grid w-full max-w-4xl grid-cols-3 gap-8 text-center text-xs text-muted-foreground"
+    >
+        <div class="flex flex-col gap-2 px-3 py-2">
             <div class="font-semibold tracking-widest uppercase">01 POSITIONING</div>
-            <p>Place all ships on the grid. Ships cannot overlap or touch each other.</p>
+            <p class="text-[11px]">
+                Place all ships on the grid. Ships cannot overlap or touch each other.
+            </p>
         </div>
 
-        <div class="flex flex-col gap-2 border-l border-neutral-800 px-3 py-2">
+        <div class="flex flex-col gap-2 px-3 py-2">
             <div class="font-semibold tracking-widest uppercase">02 COMBAT</div>
-            <p>Take turns firing at enemy coordinates. A hit grants another shot.</p>
+            <p class="text-[11px]">
+                Take turns firing at enemy coordinates. A hit grants another shot.
+            </p>
         </div>
 
-        <div class="flex flex-col gap-2 border-l border-neutral-800 px-3 py-2">
+        <div class="flex flex-col gap-2 px-3 py-2">
             <div class="font-semibold tracking-widest uppercase">03 VICTORY</div>
-            <p>Destroy all enemy ships to win the game.</p>
+            <p class="text-[11px]">Destroy all enemy ships to win the game.</p>
         </div>
     </section>
 </div>

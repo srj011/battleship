@@ -172,10 +172,63 @@
     * {
         @apply border-border outline-ring/50;
     }
-    body {
-        @apply bg-background text-foreground;
-    }
+
     html {
         @apply font-sans;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+
+        background-color: var(--background);
+
+        background-image:
+            radial-gradient(
+                ellipse 1200px 700px at center,
+                rgb(34 211 238 / 0.12) 0%,
+                transparent 70%
+            ),
+            linear-gradient(rgb(255 255 255 / 0.015) 1px, transparent 1px),
+            linear-gradient(90deg, rgb(255 255 255 / 0.015) 1px, transparent 1px);
+
+        background-size:
+            100% 100%,
+            40px 40px,
+            40px 40px;
+    }
+
+    body::before {
+        content: '';
+
+        position: fixed;
+        inset: 0;
+
+        pointer-events: none;
+
+        opacity: 0.015;
+
+        background-image: radial-gradient(circle, white 1px, transparent 1px);
+
+        background-size: 6px 6px;
+
+        z-index: -1;
+    }
+}
+
+@layer components {
+    .glass-panel {
+        background: linear-gradient(180deg, rgb(255 255 255 / 0.03), rgb(255 255 255 / 0.01));
+
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+
+        transition:
+            background-color 300ms,
+            border-color 300ms;
+    }
+
+    .glass-panel:hover {
+        background: rgba(168, 232, 255, 0.05);
+        border-color: rgba(168, 232, 255, 0.3);
     }
 }

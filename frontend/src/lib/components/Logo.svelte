@@ -9,7 +9,7 @@
     const {
         size = '24',
         color = 'currentColor',
-        accent = '#22D3EE',
+        accent = 'var(--primary)',
         class: className = ''
     }: Props = $props();
 </script>
