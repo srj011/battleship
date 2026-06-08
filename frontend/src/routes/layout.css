@@ -55,19 +55,26 @@
 
     /* Board */
 
-    --board-water: oklch(0.88 0.02 240);
-    --board-water-hover: oklch(0.83 0.03 235);
+    --board-water: oklch(0.15 0.015 250);
+    --board-water-hover: oklch(0.19 0.02 240);
 
-    --board-grid: oklch(0.55 0.02 240);
+    --board-grid: oklch(0.18 0.01 245);
 
-    --board-ship: oklch(0.7 0.09 275);
-    --board-ship-hover: oklch(0.75 0.11 275);
+    /* Cyan ship tiles */
+    --board-ship: oklch(0.72 0.09 220 / 0.28);
+    --board-ship-border: oklch(0.72 0.09 220 / 0.52);
 
-    --board-hit: oklch(0.66 0.24 25);
-    --board-hit-hover: oklch(0.72 0.26 25);
+    /* Red hit tiles */
+    --board-hit: oklch(0.72 0.14 25 / 0.38);
+    --board-hit-border: oklch(0.78 0.14 25 / 0.6);
 
-    --board-miss: oklch(0.62 0.01 250);
-    --board-blocked: oklch(0.78 0.01 250);
+    /* Revealed tiles (miss + blocked) */
+    --board-revealed: oklch(0.82 0.01 250 / 0.05);
+    --board-revealed-border: oklch(0.82 0.01 250 / 0.08);
+
+    /* Center dots */
+    --board-miss-dot: oklch(0.9 0.01 250 / 0.75);
+    --board-blocked-dot: oklch(0.9 0.01 250 / 0.25);
 
     /* Effects */
 
@@ -142,13 +149,13 @@
     --color-board-grid: var(--board-grid);
 
     --color-board-ship: var(--board-ship);
-    --color-board-ship-hover: var(--board-ship-hover);
+    --color-board-ship-border: var(--board-ship-border);
 
     --color-board-hit: var(--board-hit);
-    --color-board-hit-hover: var(--board-hit-hover);
+    --color-board-hit-border: var(--board-hit-border);
 
-    --color-board-miss: var(--board-miss);
-    --color-board-blocked: var(--board-blocked);
+    --color-board-revealed: var(--board-revealed);
+    --color-board-revealed-border: var(--board-revealed-border);
 
     --color-sidebar: var(--sidebar);
     --color-sidebar-foreground: var(--sidebar-foreground);
@@ -230,5 +237,42 @@
     .glass-panel:hover {
         background: rgba(168, 232, 255, 0.05);
         border-color: rgba(168, 232, 255, 0.3);
+    }
+
+    .ship-cell {
+        background: var(--board-ship);
+        border-color: var(--board-ship-border);
+    }
+
+    .hit-cell {
+        background: var(--board-hit);
+        border-color: var(--board-hit-border);
+    }
+
+    .miss-cell,
+    .blocked-cell {
+        background: var(--board-revealed);
+        border-color: var(--board-revealed-border);
+        position: relative;
+    }
+
+    .miss-cell::after,
+    .blocked-cell::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0.375rem;
+        height: 0.375rem;
+        border-radius: 9999px;
+        transform: translate(-50%, -50%);
+    }
+
+    .miss-cell::after {
+        background: var(--board-miss-dot);
+    }
+
+    .blocked-cell::after {
+        background: var(--board-blocked-dot);
     }
 }
