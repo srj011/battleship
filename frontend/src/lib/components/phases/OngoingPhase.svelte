@@ -1,12 +1,8 @@
 <script lang="ts">
     import { sendWS } from '$lib/api/websocket';
     import { gameStore } from '$lib/stores/game';
-    import Board from '$lib/components/game/Board.svelte';
-    import Fleet from '$lib/components/game/Fleet.svelte';
+    import PlayerPanel from '$lib/components/game/PlayerPanel.svelte';
     import type { CellView, Coord, FireMessage, PreviewCell } from '$lib/types';
-
-    const playerFleet = $derived($gameStore.game?.player_fleet);
-    const opponentFleet = $derived($gameStore.game?.opponent_fleet);
 
     const isMyTurn = $derived(
         $gameStore.game?.status.type === 'ongoing' &&
@@ -50,59 +46,27 @@
 
         <div class="flex items-stretch gap-16">
             <!-- Player's section -->
-            <div
-                class="flex flex-col gap-8 rounded-xl border border-white/5 bg-card/30 p-4 backdrop-blur-md"
-            >
-                <h2
-                    class="relative text-center font-bold tracking-wide uppercase
-                    after:absolute after:top-full after:left-1/2 after:mt-2
-                               after:h-px after:w-10 after:-translate-x-1/2
-                               after:bg-primary/50 after:content-['']"
-                >
-                    YOUR FLEET
-                </h2>
-                <!-- Player's Board -->
-                <Board
-                    class={`${isMyTurn ? 'opacity-70' : ''}`}
-                    board={$gameStore.game.player_board}
-                />
-
-                <!-- Player's fleet -->
-                {#if playerFleet}
-                    <Fleet fleet={playerFleet} variant="player" />
-                {/if}
-            </div>
+            <PlayerPanel
+                variant="player"
+                board={$gameStore.game.player_board}
+                fleet={$gameStore.game.player_fleet}
+                dimmed={isMyTurn}
+            />
 
             <div
                 class="w-px flex-1 bg-linear-to-b from-transparent via-primary/10 to-transparent"
             ></div>
 
             <!-- Opponent's section-->
-            <div
-                class="flex flex-col gap-8 rounded-xl border border-white/5 bg-surface/30 p-4 backdrop-blur-md"
-            >
-                <h2
-                    class="relative text-center font-bold tracking-wide uppercase
-                    after:absolute after:top-full after:left-1/2 after:mt-2
-                               after:h-px after:w-10 after:-translate-x-1/2
-                               after:bg-primary/50 after:content-['']"
-                >
-                    ENEMY WATERS
-                </h2>
-                <!-- Opponent's Board -->
-                <Board
-                    class={`${!isMyTurn ? 'opacity-70' : ''}`}
-                    board={$gameStore.game.opponent_board}
-                    clickable={isMyTurn}
-                    onCellClick={handleFire}
-                    {isCellClickable}
-                />
-
-                <!-- Opponent's fleet -->
-                {#if opponentFleet}
-                    <Fleet fleet={opponentFleet} variant="opponent" />
-                {/if}
-            </div>
+            <PlayerPanel
+                variant="opponent"
+                board={$gameStore.game.opponent_board}
+                fleet={$gameStore.game.opponent_fleet}
+                dimmed={!isMyTurn}
+                clickable={isMyTurn}
+                onCellClick={handleFire}
+                {isCellClickable}
+            />
         </div>
     {/if}
 </div>
