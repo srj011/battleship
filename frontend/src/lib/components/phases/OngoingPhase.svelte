@@ -40,13 +40,22 @@
             </div>
         </div>
 
-        <div class="flex items-stretch gap-12">
+        <div class="flex items-stretch gap-16">
             <!-- Player's section -->
-            <div class="flex flex-col gap-8 p-2">
-                <h2 class="text-center text-base font-bold tracking-wide uppercase">YOUR FLEET</h2>
+            <div
+                class="flex flex-col gap-8 rounded-xl border border-white/5 bg-card/30 p-4 backdrop-blur-md"
+            >
+                <h2
+                    class="relative text-center font-bold tracking-wide uppercase
+                    after:absolute after:top-full after:left-1/2 after:mt-2
+                               after:h-px after:w-10 after:-translate-x-1/2
+                               after:bg-primary/50 after:content-['']"
+                >
+                    YOUR FLEET
+                </h2>
                 <!-- Player's Board -->
                 <Board
-                    class={`${isMyTurn ? 'opacity-60' : ''}`}
+                    class={`${isMyTurn ? 'opacity-70' : ''}`}
                     board={$gameStore.game.player_board}
                 />
 
@@ -56,27 +65,25 @@
                 {/if}
             </div>
 
-            <!-- VS separator -->
-            <div class="relative flex items-center justify-center self-stretch">
-                <!-- Full vertical line -->
-                <div class="absolute inset-y-0 w-0.5 bg-neutral-300/30"></div>
-
-                <!-- VS text -->
-                <span
-                    class="z-10 bg-white px-2 text-sm tracking-widest text-neutral-600/80 uppercase"
-                >
-                    VS
-                </span>
-            </div>
+            <div
+                class="w-px flex-1 bg-linear-to-b from-transparent via-primary/10 to-transparent"
+            ></div>
 
             <!-- Opponent's section-->
-            <div class="flex flex-col gap-8 p-2">
-                <h2 class="text-center text-base font-bold tracking-wide uppercase">
+            <div
+                class="flex flex-col gap-8 rounded-xl border border-white/5 bg-surface/30 p-4 backdrop-blur-md"
+            >
+                <h2
+                    class="relative text-center font-bold tracking-wide uppercase
+                    after:absolute after:top-full after:left-1/2 after:mt-2
+                               after:h-px after:w-10 after:-translate-x-1/2
+                               after:bg-primary/50 after:content-['']"
+                >
                     ENEMY WATERS
                 </h2>
                 <!-- Opponent's Board -->
                 <Board
-                    class={`${!isMyTurn ? 'opacity-60' : ''}`}
+                    class={`${!isMyTurn ? 'opacity-70' : ''}`}
                     board={$gameStore.game.opponent_board}
                     clickable={isMyTurn}
                     onCellClick={handleFire}
