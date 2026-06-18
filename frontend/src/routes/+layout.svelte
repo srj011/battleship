@@ -69,7 +69,7 @@
 <div class="flex min-h-screen flex-col">
     <!-- Header -->
     <header class="border-b bg-background/80 backdrop-blur-md">
-        <div class="grid grid-cols-3 items-center px-6 py-4">
+        <div class="grid grid-cols-3 items-center px-6 py-3">
             <!-- Left -->
             <div class="flex items-center gap-4">
                 <Logo />
@@ -98,16 +98,21 @@
                 {#if page.params.code}
                     <button
                         class="flex cursor-pointer items-center gap-1
-                        border border-neutral-600 px-3 py-1
+                        rounded-md border bg-card/40 px-3 py-1
                         text-xs tracking-widest select-none"
                         onclick={copyGameLink}
                         disabled={copied}
                         title="Click to Copy"
                     >
-                        <span class="opacity-60">CODE:</span>
+                        <span class="text-muted-foreground">CODE:</span>
                         <span class="font-mono text-sm">{copied ? 'COPIED' : page.params.code}</span
                         >
-                        <Icon icon="material-symbols:content-copy-rounded" width="16" height="16" />
+                        <Icon
+                            icon="material-symbols:content-copy-rounded"
+                            width="16"
+                            height="16"
+                            class="text-primary/80"
+                        />
                     </button>
                 {/if}
             </div>
@@ -115,7 +120,9 @@
             <!-- Right -->
             <div class="flex items-center gap-10 justify-self-end">
                 <div class="flex items-center gap-3 text-xs tracking-wider">
-                    <div class="flex items-center gap-2 font-semibold text-gray-400 uppercase">
+                    <div
+                        class="flex items-center gap-2 font-semibold text-muted-foreground uppercase"
+                    >
                         {#if page.params.code}
                             {#if opponent_present}
                                 {#if opponentDisconnected}
@@ -168,6 +175,7 @@
                                 goto(resolve('/'));
                             }}
                         >
+                            <Icon icon="mdi:exit-to-app" />
                             Return to Lobby
                         </Button>
                     {/if}
