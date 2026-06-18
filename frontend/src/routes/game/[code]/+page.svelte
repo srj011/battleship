@@ -86,7 +86,7 @@
     );
 </script>
 
-<div class="flex flex-1 justify-center gap-6 p-4">
+<div class="flex flex-1 justify-center gap-6 p-4 backdrop-blur-md">
     {#if !$gameStore.game}
         <p>Loading game...</p>
     {:else if phase === 'placing_ships'}

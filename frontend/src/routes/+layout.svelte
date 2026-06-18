@@ -177,7 +177,7 @@
     </header>
 
     <!-- Main -->
-    <main class="flex flex-1 p-4">
+    <main class="flex flex-1">
         <NotificationStack />
         {@render children()}
         <ConnectionStatus />
