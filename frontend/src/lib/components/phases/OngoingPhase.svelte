@@ -32,10 +32,18 @@
 <div class="flex flex-col items-center gap-8">
     {#if $gameStore.game}
         <!-- Turn Indicator -->
-        <div class="mx-auto max-w-md rounded bg-gray-200 px-4 py-3 text-sm text-black">
-            <div class="flex items-center justify-center">
-                <span class="font-semibold tracking-widest uppercase">
-                    {isMyTurn ? 'Your Turn' : "Opponent's Turn"}
+        <div class="flex flex-col items-center">
+            <div
+                class={`relative rounded-md border bg-card/60 px-8 py-2.5
+                    before:absolute before:top-0 before:right-4 before:left-4
+                    before:h-px before:content-['']
+                    ${isMyTurn ? 'before:bg-primary/80' : 'before:bg-foreground/20'}`}
+            >
+                <span
+                    class={`text-sm font-semibold tracking-[0.2em] uppercase
+                    ${isMyTurn ? 'text-primary' : 'text-foreground/80'}`}
+                >
+                    ▶ {isMyTurn ? 'Your Turn' : "Opponent's Turn"}
                 </span>
             </div>
         </div>
