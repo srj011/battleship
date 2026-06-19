@@ -1,8 +1,6 @@
 import { apiHealth } from '$lib/stores/app';
 import type { ApiErrorCode } from '$lib/types';
-
-const API_BASE = 'http://localhost:3000/api';
-const API_V1 = API_BASE + '/v1';
+import { API_BASE, API_V1 } from '$lib/config';
 
 export class ApiError extends Error {
     code: ApiErrorCode;

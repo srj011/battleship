@@ -4,6 +4,7 @@ import { notificationStore } from '$lib/stores/notification';
 import { get } from 'svelte/store';
 import type { ClientMessage, ServerMessage } from '$lib/types';
 import { verifySession } from '$lib/api/client';
+import { getWsUrl } from '$lib/config';
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -64,7 +65,7 @@ export function connectWS(code: string, token: string) {
         socket = null;
     }
 
-    const url = `ws://localhost:3000/api/v1/game/${code}/ws?player_token=${token}`;
+    const url = getWsUrl(`/api/v1/game/${code}/ws?player_token=${token}`);
     socket = new WebSocket(url);
 
     if (get(gameStore).connection.state !== 'reconnecting') {
