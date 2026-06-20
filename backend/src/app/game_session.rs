@@ -423,9 +423,6 @@ impl GameSession {
         let event = self.fire_once(acting_player, coord)?;
         events.push(event);
 
-        // AI turn
-        self.ai_turn()?;
-
         if let GameStatus::Finished { winner } = self.game.status() {
             info!(event = "game_finished", winner = ?winner);
         }
@@ -465,27 +462,60 @@ impl GameSession {
         Ok(event)
     }
 
-    fn ai_turn(&mut self) -> Result<(), GameError> {
+    pub fn is_ai_turn(&self) -> bool {
+        let is_ai_turn = self.ai.is_some()
+            && self.game.status() == GameStatus::Ongoing
+            && self.game.current_turn() == Turn::Player2;
+
+        debug!(
+            event = "ai_turn_checked",
+            is_ai_turn,
+            has_ai = self.ai.is_some(),
+            status = ?self.game.status(),
+            current_turn = ?self.game.current_turn()
+        );
+
+        is_ai_turn
+    }
+
+    pub fn ai_fire_once(&mut self) -> Result<bool, GameError> {
+        self.touch();
+
+        if !self.is_ai_turn() {
+            debug!(event = "ai_fire_skipped", reason = "not_ai_turn");
+            return Ok(false);
+        }
+
         let Some(mut ai) = self.ai.take() else {
-            return Ok(());
+            debug!(event = "ai_fire_skipped", reason = "no_ai_player");
+            return Ok(false);
         };
 
-        while self.game.status() == GameStatus::Ongoing && self.game.current_turn() == Turn::Player2
-        {
-            let coord = ai.next_shot();
-            let event = self.fire_once(Turn::Player2, coord)?;
+        debug!(event = "ai_fire_started");
+        let coord = ai.next_shot();
+        let event = self.fire_once(Turn::Player2, coord)?;
 
-            debug_assert!(event.outcome.result != ShotResult::AlreadyShot);
+        debug_assert!(event.outcome.result != ShotResult::AlreadyShot);
 
-            ai.process_result(coord, &event.outcome);
+        ai.process_result(coord, &event.outcome);
 
-            if event.outcome.result == ShotResult::Miss {
-                break;
-            }
+        if let GameStatus::Finished { winner } = self.game.status() {
+            info!(event = "game_finished", winner = ?winner);
         }
+
         self.ai = Some(ai);
 
-        Ok(())
+        let should_continue = event.outcome.result != ShotResult::Miss && self.is_ai_turn();
+
+        debug!(
+            event = "ai_fire_finished",
+            row = coord.row(),
+            col = coord.col(),
+            result = ?event.outcome.result,
+            should_continue
+        );
+
+        Ok(should_continue)
     }
 
     pub fn handle_leave(&mut self, player: Turn) {

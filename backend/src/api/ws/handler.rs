@@ -6,6 +6,7 @@ use axum::{
     response::IntoResponse,
 };
 use futures::{SinkExt, StreamExt, stream::SplitSink};
+use rand::prelude::*;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast;
@@ -348,10 +349,58 @@ async fn handle_fire(
 ) -> Result<(), ApiError> {
     let coord: Coord = coord.try_into()?;
 
-    let mut session = session_arc.lock().unwrap();
-    session.player_fire(player, coord)?;
+    let should_start_ai = {
+        let mut session = session_arc.lock().unwrap();
+        session.player_fire(player, coord)?;
+        session.is_ai_turn()
+    };
+
+    if should_start_ai {
+        debug!(event = "ai_turn_scheduled");
+        tokio::spawn(run_delayed_ai_turn(session_arc));
+    } else {
+        debug!(event = "ai_turn_not_scheduled");
+    }
 
     Ok(())
+}
+
+async fn run_delayed_ai_turn(session_arc: Arc<Mutex<GameSession>>) {
+    debug!(event = "ai_turn_loop_started");
+
+    loop {
+        let delay = random_ai_delay();
+        debug!(event = "ai_turn_delay_started", delay_ms = delay.as_millis());
+        sleep(delay).await;
+
+        let should_continue = {
+            let mut session = session_arc.lock().unwrap();
+
+            match session.ai_fire_once() {
+                Ok(should_continue) => {
+                    debug!(event = "ai_turn_step_completed", should_continue);
+                    should_continue
+                }
+                Err(err) => {
+                    error!(?err, "ai fire handling failed");
+                    false
+                }
+            }
+        };
+
+        if !should_continue {
+            break;
+        }
+    }
+
+    debug!(event = "ai_turn_loop_finished");
+}
+
+fn random_ai_delay() -> Duration {
+    let mut rng = rand::rng();
+    let delay = Duration::from_millis(rng.random_range(700..=1_600));
+    debug!(event = "ai_turn_delay_selected", delay_ms = delay.as_millis());
+    delay
 }
 
 async fn handle_rematch(
